@@ -1,6 +1,6 @@
-# Tabu
+# Buzzwort
 
-Taboo-inspired word explanation game for Open Party Lab with team and party flow.
+Fast-paced word explanation party game: describe the term without saying any of the blocked words while a watcher listens in.
 
 ![In-game screenshot](docs/screenshots/host.png)
 
@@ -17,7 +17,7 @@ Recommended layout:
 ```text
 Open-Party-Lab/
   local-games/
-    tabu/
+    buzzwort/
 ```
 
 From the Platform repo:
@@ -35,7 +35,7 @@ The Platform loads this game only when the repo exists locally and `npm run game
 Description:
 
 ```text
-Taboo-inspired word explanation game for Open Party Lab with team and party flow.
+Fast-paced word explanation party game: describe the term without saying any of the blocked words while a watcher listens in.
 ```
 
 Suggested topics:
@@ -46,11 +46,11 @@ open-party-lab party-game browser-game phaser typescript local-multiplayer word-
 
 ## Package Entrypoints
 
-- `@open-party-lab/game-tabu/manifest`
-- `@open-party-lab/game-tabu/protocol`
-- `@open-party-lab/game-tabu/server`
-- `@open-party-lab/game-tabu/host`
-- `@open-party-lab/game-tabu/controller`
+- `@open-party-lab/game-buzzwort/manifest`
+- `@open-party-lab/game-buzzwort/protocol`
+- `@open-party-lab/game-buzzwort/server`
+- `@open-party-lab/game-buzzwort/host`
+- `@open-party-lab/game-buzzwort/controller`
 
 The Platform should import only these public entrypoints.
 

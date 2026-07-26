@@ -1,17 +1,17 @@
 import type { GameManifest } from "@open-party-lab/game-core";
 
-export const tabuManifest = {
-  id: "tabu",
-  displayName: "Tabu",
-  description: "Erklaert Begriffe, ohne die Tabu-Woerter zu benutzen.",
-  minPlayers: 2,
+export const buzzwortManifest = {
+  id: "buzzwort",
+  displayName: "Buzzwort",
+  description: "Erklaere Begriffe gegen die Uhr, ohne die verbotenen Woerter zu sagen - ein Waechter passt auf.",
+  minPlayers: 3,
   maxPlayers: 20,
-  hostView: "TabuHostScene",
-  controllerView: "tabu",
-  controllerLayout: "choice",
+  hostView: "BuzzwortHostScene",
+  controllerView: "buzzwort",
+  controllerLayout: "secret_card",
   supportsTeams: true,
-  estimatedRoundDurationMs: 75_000,
+  estimatedRoundDurationMs: 420_000,
   roundCompletionMode: "wait_for_ready"
 } as const satisfies GameManifest;
 
-export const manifest = tabuManifest;
+export const manifest = buzzwortManifest;

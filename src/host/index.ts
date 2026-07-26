@@ -1,9 +1,9 @@
 import Phaser from "phaser";
-import { tabuManifest } from "../manifest.js";
-import type { TabuControllerState, TabuMode } from "../protocol.js";
+import { buzzwortManifest } from "../manifest.js";
+import type { BuzzwortControllerState, BuzzwortMode } from "../protocol.js";
 import { hostTheme } from "./theme.js";
-import { renderTabuHud } from "./TabuHud.js";
-import { renderTabuState } from "./TabuRenderer.js";
+import { BuzzwortHud } from "./BuzzwortHud.js";
+import { BuzzwortStage } from "./BuzzwortStage.js";
 
 interface HostClientLike {
   subscribe(callback: (state: HostAppStateLike) => void): () => void;
@@ -12,6 +12,7 @@ interface HostClientLike {
 
 interface HostAppStateLike {
   game?: {
+    phase?: string;
     message?: string;
     state?: unknown;
   } | null;
@@ -19,87 +20,125 @@ interface HostAppStateLike {
     code?: string;
     language?: "de" | "en";
     players?: Array<{ id: string; name: string }>;
+    settings?: Record<string, unknown>;
   } | null;
 }
 
-export class TabuHostScene extends Phaser.Scene {
+const RUNNING_PHASES = new Set(["playing", "countdown", "locked"]);
+
+export class BuzzwortHostScene extends Phaser.Scene {
   private unsubscribe?: () => void;
-  private selectedMode: TabuMode = "duel";
+  private hud?: BuzzwortHud;
+  private stage?: BuzzwortStage;
+
+  private selectedMode: BuzzwortMode = "duel";
+  private watcherEnabled = true;
+  private turnDurationMs = 60_000;
+
+  private latest: HostAppStateLike = {};
+  private playerNames = new Map<string, string>();
 
   constructor() {
-    super(tabuManifest.hostView);
+    super(buzzwortManifest.hostView);
   }
 
   create(): void {
     const client = this.registry.get("hostClient") as HostClientLike;
 
+    this.cameras.main.setBackgroundColor(hostTheme.panel);
+
+    this.hud = new BuzzwortHud(this, {
+      onSelectMode: (mode) => {
+        this.selectedMode = mode;
+        client.sendGameHostAction("buzzwort", { type: "set_mode", mode });
+        this.refreshHud();
+      },
+      onToggleWatcher: (enabled) => {
+        this.watcherEnabled = enabled;
+        client.sendGameHostAction("buzzwort", { type: "set_watcher", watcherEnabled: enabled });
+        this.refreshHud();
+      },
+      onSelectDuration: (durationMs) => {
+        this.turnDurationMs = durationMs;
+        client.sendGameHostAction("buzzwort", { type: "set_turn_duration", turnDurationMs: durationMs });
+        this.refreshHud();
+      }
+    });
+
+    this.stage = new BuzzwortStage(this);
+
     this.unsubscribe = client.subscribe((state) => {
-      const gameState = state.game?.state as TabuControllerState | undefined;
-      const language = state.room?.language;
-      const en = language === "en";
-      const playerNames = new Map((state.room?.players ?? []).map((player) => [player.id, player.name]));
-      const fallbackState: TabuControllerState = {
-        mode: this.selectedMode,
-        currentModeLabel: this.selectedMode === "team" ? (en ? "Team Mode" : "Teammodus") : en ? "Free-for-all" : "Jeder gegen jeden",
-        solvedTerms: 0,
-        targetTerms: 10,
-        solvedByPlayerId: {},
-        solvedByTeamId: { team1: 0, team2: 0 },
-        teamByPlayerId: {},
-        currentTurnPlayerId: undefined,
-        currentTurnTeamId: undefined,
-        isExplainer: false,
-        turnDurationMs: this.selectedMode === "team" ? 30_000 : 15_000,
-        turnEndsAt: null,
-        turnRemainingMs: null,
-        turnIndex: 0,
-        guesserPlayerIds: [],
-        activeTeamPlayerIds: [],
-        teamScoresByTeamId: { team1: 0, team2: 0 },
-        remainingCards: 0
-      };
+      this.latest = state;
+      this.playerNames = new Map((state.room?.players ?? []).map((player) => [player.id, player.name]));
+
+      const gameState = state.game?.state as BuzzwortControllerState | undefined;
 
       if (gameState?.mode) {
         this.selectedMode = gameState.mode;
       }
 
-      this.children.removeAll(true);
-      this.cameras.main.setBackgroundColor(hostTheme.panel);
+      if (typeof gameState?.watcherEnabled === "boolean") {
+        this.watcherEnabled = gameState.watcherEnabled;
+      }
 
-      const hudBottom = renderTabuHud(this, {
-        roomCode: state.room?.code ?? "----",
-        mode: gameState?.mode ?? this.selectedMode,
-        language,
-        onSelectMode: (mode) => {
-          this.selectedMode = mode;
-          client.sendGameHostAction("tabu", {
-            type: "set_mode",
-            mode
-          });
-        }
-      });
+      if (typeof gameState?.turnDurationMs === "number" && gameState.turnDurationMs > 0) {
+        this.turnDurationMs = gameState.turnDurationMs;
+      }
 
-      renderTabuState(
-        this,
-        gameState ?? fallbackState,
-        playerNames,
-        state.room?.players?.length ?? 0,
-        hudBottom + 24,
-        state.game?.message,
-        language
-      );
+      this.refreshHud();
     });
+
+    const onResize = () => {
+      this.hud?.layout();
+      this.stage?.layout();
+    };
+
+    this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
       this.unsubscribe?.();
       this.unsubscribe = undefined;
+      this.hud?.destroy();
+      this.hud = undefined;
+      this.stage = undefined;
     });
+
+    this.refreshHud();
+  }
+
+  private refreshHud(): void {
+    const phase = this.latest.game?.phase;
+
+    this.hud?.update({
+      roomCode: this.latest.room?.code ?? "----",
+      mode: this.selectedMode,
+      watcherEnabled: this.selectedMode === "team" ? true : this.watcherEnabled,
+      turnDurationMs: this.turnDurationMs,
+      locked: Boolean(phase && RUNNING_PHASES.has(phase)),
+      language: this.latest.room?.language
+    });
+  }
+
+  update(time: number): void {
+    this.stage?.update(
+      {
+        state: this.latest.game?.state as BuzzwortControllerState | undefined,
+        playerNames: this.playerNames,
+        playerCount: this.latest.room?.players?.length ?? 0,
+        message: this.latest.game?.message,
+        language: this.latest.room?.language
+      },
+      Date.now()
+    );
+
+    void time;
   }
 }
 
 export const hostGame = {
-  id: tabuManifest.id,
-  displayName: tabuManifest.displayName,
-  sceneKey: tabuManifest.hostView,
-  scene: TabuHostScene
+  id: buzzwortManifest.id,
+  displayName: buzzwortManifest.displayName,
+  sceneKey: buzzwortManifest.hostView,
+  scene: BuzzwortHostScene
 } as const;

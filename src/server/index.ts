@@ -7,78 +7,86 @@ import {
 } from "@open-party-lab/game-core";
 import { shuffle } from "@open-party-lab/utils";
 import type {
-  TabuControllerState,
-  TabuHostAction,
-  TabuInput,
-  TabuMode,
-  TabuState,
-  TabuTeamId
+  BuzzwortCard,
+  BuzzwortControllerState,
+  BuzzwortEvent,
+  BuzzwortEventKind,
+  BuzzwortHostAction,
+  BuzzwortInput,
+  BuzzwortMode,
+  BuzzwortRole,
+  BuzzwortState,
+  BuzzwortTeamId
 } from "../protocol.js";
-import { tabuManifest } from "../manifest.js";
-import { buildTabuScoreEntries } from "./tabuScoring.js";
-import { tabuCards } from "./content/tabuCards.js";
+import { buzzwortManifest } from "../manifest.js";
+import { buildBuzzwortScoreEntries } from "./buzzwortScoring.js";
+import { resolveBuzzwortDeck } from "./content/buzzwortCards.js";
+import {
+  resolveModeLabel,
+  resolveRoleLabel,
+  resolveBuzzwortTexts,
+  resolveTeamLabel,
+  type BuzzwortTexts
+} from "./buzzwortText.js";
 
-const DEFAULT_TARGET_TERMS = 10;
-const DUEL_TURN_DURATION_MS = 15_000;
-const TEAM_TURN_DURATION_MS = 30_000;
-const TABU_MODE_ROOM_SETTING_KEY = "tabu_mode";
+const MODE_SETTING_KEY = "buzzwort_mode";
+const WATCHER_SETTING_KEY = "buzzwort_watcher";
+const TURN_MS_SETTING_KEY = "buzzwort_turn_ms";
+
+export const BUZZWORT_TURN_DURATION_OPTIONS = [45_000, 60_000, 90_000] as const;
+const DEFAULT_TURN_DURATION_MS = 60_000;
+
+const PREVIEW_MS = 4_000;
+const HANDOVER_MS = 3_500;
+const MAX_SKIPS_PER_TURN = 2;
+const TEAM_TURNS_PER_SIDE = 3;
+const MAX_DUEL_TURNS = 10;
+const MAX_EVENTS = 14;
 
 type PlayerSummary = ServerGameContext["players"][number];
 
-function resolveMode(roomSettings: Readonly<Record<string, unknown>>): TabuMode {
-  return roomSettings[TABU_MODE_ROOM_SETTING_KEY] === "team" ? "team" : "duel";
+/* -------------------------------------------------------------------------- */
+/* Settings                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function resolveMode(roomSettings: Readonly<Record<string, unknown>>): BuzzwortMode {
+  return roomSettings[MODE_SETTING_KEY] === "team" ? "team" : "duel";
 }
 
-function resolveModeLabel(mode: TabuMode, en = false): string {
-  return mode === "team" ? (en ? "Team Mode" : "Teammodus") : en ? "Free-for-all" : "Jeder gegen jeden";
+function resolveWatcherEnabled(roomSettings: Readonly<Record<string, unknown>>): boolean {
+  return roomSettings[WATCHER_SETTING_KEY] !== false && roomSettings[WATCHER_SETTING_KEY] !== "off";
 }
 
-function resolveTeamLabel(teamId: TabuTeamId): string {
-  return teamId === "team1" ? "Team 1" : "Team 2";
+function resolveTurnDurationMs(roomSettings: Readonly<Record<string, unknown>>): number {
+  const raw = roomSettings[TURN_MS_SETTING_KEY];
+  const parsed = typeof raw === "number" ? raw : Number(raw);
+
+  return BUZZWORT_TURN_DURATION_OPTIONS.includes(parsed as (typeof BUZZWORT_TURN_DURATION_OPTIONS)[number])
+    ? parsed
+    : DEFAULT_TURN_DURATION_MS;
 }
 
-function getPlayerName(players: readonly PlayerSummary[], playerId?: string): string {
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                     */
+/* -------------------------------------------------------------------------- */
+
+function getPlayerName(players: readonly PlayerSummary[], texts: BuzzwortTexts, playerId?: string): string {
   if (!playerId) {
-    return "Unbekannt";
+    return texts.unknownPlayer;
   }
 
-  return players.find((player) => player.id === playerId)?.name ?? "Unbekannt";
-}
-
-function buildTurnOrder(players: readonly PlayerSummary[]): string[] {
-  return players.map((player) => player.id);
-}
-
-function resolveNextPlayerId(playerOrder: readonly string[], currentPlayerId?: string): string | undefined {
-  if (playerOrder.length === 0) {
-    return undefined;
-  }
-
-  if (!currentPlayerId) {
-    return playerOrder[0];
-  }
-
-  const currentIndex = playerOrder.indexOf(currentPlayerId);
-
-  if (currentIndex === -1) {
-    return playerOrder[0];
-  }
-
-  return playerOrder[(currentIndex + 1) % playerOrder.length];
+  return players.find((player) => player.id === playerId)?.name ?? texts.unknownPlayer;
 }
 
 function buildTeamAssignments(players: readonly PlayerSummary[]): {
-  teamByPlayerId: Record<string, TabuTeamId>;
-  teamMembersByTeamId: Record<TabuTeamId, string[]>;
+  teamByPlayerId: Record<string, BuzzwortTeamId>;
+  teamMembersByTeamId: Record<BuzzwortTeamId, string[]>;
 } {
-  const teamMembersByTeamId: Record<TabuTeamId, string[]> = {
-    team1: [],
-    team2: []
-  };
-  const teamByPlayerId: Record<string, TabuTeamId> = {};
+  const teamMembersByTeamId: Record<BuzzwortTeamId, string[]> = { team1: [], team2: [] };
+  const teamByPlayerId: Record<string, BuzzwortTeamId> = {};
 
   players.forEach((player, index) => {
-    const teamId: TabuTeamId = index % 2 === 0 ? "team1" : "team2";
+    const teamId: BuzzwortTeamId = index % 2 === 0 ? "team1" : "team2";
     teamByPlayerId[player.id] = teamId;
     teamMembersByTeamId[teamId].push(player.id);
   });
@@ -86,542 +94,625 @@ function buildTeamAssignments(players: readonly PlayerSummary[]): {
   return { teamByPlayerId, teamMembersByTeamId };
 }
 
-function resolveTeamExplainerId(
-  teamMembersByTeamId: Record<TabuTeamId, string[]>,
-  teamId: TabuTeamId,
-  nextTeamExplainerIndexByTeamId: Record<TabuTeamId, number>,
-  players: readonly PlayerSummary[]
-): string | undefined {
-  const orderedMembers = teamMembersByTeamId[teamId].filter((playerId) =>
-    players.some((player) => player.id === playerId)
-  );
-
-  if (orderedMembers.length === 0) {
-    return players[0]?.id;
-  }
-
-  const nextIndex = nextTeamExplainerIndexByTeamId[teamId] ?? 0;
-  return orderedMembers[nextIndex % orderedMembers.length];
+function livingMembers(memberIds: readonly string[], players: readonly PlayerSummary[]): string[] {
+  return memberIds.filter((memberId) => players.some((player) => player.id === memberId));
 }
 
-function resolveCurrentTurnTeamId(state: TabuState): TabuTeamId | undefined {
-  if (state.currentTurnTeamId) {
-    return state.currentTurnTeamId;
-  }
-
-  if (!state.currentTurnPlayerId) {
-    return undefined;
-  }
-
-  return state.teamByPlayerId[state.currentTurnPlayerId];
+function opposingTeam(teamId: BuzzwortTeamId): BuzzwortTeamId {
+  return teamId === "team1" ? "team2" : "team1";
 }
 
-function resolveTurnRemainingMs(state: TabuState, now: number): number | null {
-  if (state.turnEndsAt === null) {
-    return null;
-  }
+function drawCard(queue: BuzzwortCard[], deck: readonly BuzzwortCard[]): { card?: BuzzwortCard; queue: BuzzwortCard[] } {
+  const next = queue.length > 0 ? queue : shuffle(deck);
 
-  return Math.max(0, state.turnEndsAt - now);
+  return { card: next[0], queue: next.slice(1) };
 }
 
-function buildCommonControllerState(
-  state: TabuState,
-  context: ServerGameContext,
-  playerId: string
-): TabuControllerState {
-  const currentTurnTeamId = resolveCurrentTurnTeamId(state);
-  const isExplainer = state.currentTurnPlayerId === playerId;
-  const activeTeamPlayerIds = currentTurnTeamId ? state.teamMembersByTeamId[currentTurnTeamId] ?? [] : [];
-  const turnRemainingMs = resolveTurnRemainingMs(state, context.now);
-
-  return {
-    mode: state.mode,
-    solvedTerms: state.solvedTerms,
-    targetTerms: state.targetTerms,
-    lastSolverPlayerId: state.lastSolverPlayerId,
-    lastSolverName: state.lastSolverName,
-    lastSolvedTerm: state.lastSolvedTerm,
-    solvedByPlayerId: state.solvedByPlayerId,
-    solvedByTeamId: state.solvedByTeamId,
-    teamByPlayerId: state.teamByPlayerId,
-    currentTurnPlayerId: state.currentTurnPlayerId,
-    currentTurnTeamId,
-    isExplainer,
-    currentCardTerm: isExplainer && state.currentCard ? state.currentCard.term : undefined,
-    turnDurationMs: state.turnDurationMs,
-    turnEndsAt: state.turnEndsAt,
-    turnRemainingMs,
-    turnIndex: state.turnIndex,
-    guesserPlayerIds:
-      state.mode === "duel" && isExplainer
-        ? context.players
-            .map((player) => player.id)
-            .filter((candidate) => candidate !== playerId)
-        : [],
-    activeTeamPlayerIds,
-    activeTeamLabel: currentTurnTeamId ? resolveTeamLabel(currentTurnTeamId) : undefined,
-    currentModeLabel: resolveModeLabel(state.mode, context.language === "en"),
-    teamScoresByTeamId: state.solvedByTeamId,
-    remainingCards: state.remainingCards
-  };
+function pushEvent(
+  events: readonly BuzzwortEvent[],
+  event: Omit<BuzzwortEvent, "id">
+): BuzzwortEvent[] {
+  const id = `${event.kind}-${event.at}-${events.length}`;
+  return [{ ...event, id }, ...events].slice(0, MAX_EVENTS);
 }
 
-function buildPublicState(state: TabuState, now: number, en = false): TabuControllerState {
-  return {
-    mode: state.mode,
-    solvedTerms: state.solvedTerms,
-    targetTerms: state.targetTerms,
-    lastSolverPlayerId: state.lastSolverPlayerId,
-    lastSolverName: state.lastSolverName,
-    lastSolvedTerm: state.lastSolvedTerm,
-    solvedByPlayerId: state.solvedByPlayerId,
-    solvedByTeamId: state.solvedByTeamId,
-    teamByPlayerId: state.teamByPlayerId,
-    currentTurnPlayerId: state.currentTurnPlayerId,
-    currentTurnTeamId: state.currentTurnTeamId,
-    isExplainer: false,
-    currentCardTerm: undefined,
-    turnDurationMs: state.turnDurationMs,
-    turnEndsAt: state.turnEndsAt,
-    turnRemainingMs: resolveTurnRemainingMs(state, now),
-    turnIndex: state.turnIndex,
-    guesserPlayerIds: [],
-    activeTeamPlayerIds: [],
-    activeTeamLabel: state.currentTurnTeamId ? resolveTeamLabel(state.currentTurnTeamId) : undefined,
-    currentModeLabel: resolveModeLabel(state.mode, en),
-    teamScoresByTeamId: state.solvedByTeamId,
-    remainingCards: state.remainingCards
-  };
+function totalTurnsFor(mode: BuzzwortMode, playerCount: number): number {
+  if (mode === "team") {
+    return TEAM_TURNS_PER_SIDE * 2;
+  }
+
+  return Math.max(1, Math.min(playerCount, MAX_DUEL_TURNS));
 }
 
-function createNextTurnState(
-  state: TabuState,
-  context: ServerGameContext,
-  nextCardQueue: typeof state.cardQueue,
-  nextCard: typeof state.currentCard | undefined,
-  options: {
-    solved?: boolean;
-    solvedPlayerId?: string;
-    solvedPlayerName?: string;
-    solvedTeamId?: TabuTeamId;
-    advanceTeamTurn?: boolean;
-    timeout?: boolean;
-  }
-): TabuState {
-  const mode = state.mode;
-  const currentTurnTeamId = resolveCurrentTurnTeamId(state);
-  const teamMode = mode === "team";
-  const hasNextCard = Boolean(nextCard);
-  const currentTurnDurationMs = teamMode ? TEAM_TURN_DURATION_MS : DUEL_TURN_DURATION_MS;
-  const turnAdvanced = teamMode ? options.advanceTeamTurn || options.timeout || !options.solved : true;
-  const en = context.language === "en";
-  const fallbackPlayer = en ? "A player" : "Ein Spieler";
-  const fallbackTerm = en ? "a term" : "einen Begriff";
-  const noCardsMessage = en ? "No Taboo cards available." : "Keine Tabu-Karten mehr verfuegbar.";
-  let currentTurnPlayerId = state.currentTurnPlayerId;
-  let currentTurnTeamIdNext = currentTurnTeamId;
-  let nextTeamExplainerIndexByTeamId = { ...state.nextTeamExplainerIndexByTeamId };
-  let nextDuelExplainerIndex = state.nextDuelExplainerIndex;
+/* -------------------------------------------------------------------------- */
+/* Turn assignment                                                             */
+/* -------------------------------------------------------------------------- */
 
-  if (teamMode) {
-    if (options.advanceTeamTurn || options.timeout || !options.solved) {
-      const nextTeamId: TabuTeamId = currentTurnTeamId === "team1" ? "team2" : "team1";
-      currentTurnTeamIdNext = nextTeamId;
-      currentTurnPlayerId = resolveTeamExplainerId(
-        state.teamMembersByTeamId,
-        nextTeamId,
-        nextTeamExplainerIndexByTeamId,
-        context.players
-      );
-      nextTeamExplainerIndexByTeamId = {
-        ...nextTeamExplainerIndexByTeamId,
-        [nextTeamId]: (nextTeamExplainerIndexByTeamId[nextTeamId] ?? 0) + 1
-      };
-    }
-  } else {
-    currentTurnPlayerId = resolveNextPlayerId(
-      state.turnOrderPlayerIds,
-      currentTurnPlayerId ?? state.turnOrderPlayerIds[0]
-    );
-    currentTurnTeamIdNext = undefined;
-    nextDuelExplainerIndex += 1;
-  }
-
-  const nextState: TabuState = {
-    ...state,
-    solvedTerms: options.solved ? state.solvedTerms + 1 : state.solvedTerms,
-    lastSolverPlayerId: options.solved ? options.solvedPlayerId : state.lastSolverPlayerId,
-    lastSolverName: options.solved ? options.solvedPlayerName : state.lastSolverName,
-    lastSolvedTerm: options.solved ? state.currentCard?.term : state.lastSolvedTerm,
-    solvedByPlayerId:
-      options.solved && options.solvedPlayerId
-        ? {
-            ...state.solvedByPlayerId,
-            [options.solvedPlayerId]: (state.solvedByPlayerId[options.solvedPlayerId] ?? 0) + 1
-          }
-        : state.solvedByPlayerId,
-    solvedByTeamId:
-      options.solved && options.solvedTeamId
-        ? {
-            ...state.solvedByTeamId,
-            [options.solvedTeamId]: (state.solvedByTeamId[options.solvedTeamId] ?? 0) + 1
-          }
-        : state.solvedByTeamId,
-    currentTurnPlayerId,
-    currentTurnTeamId: currentTurnTeamIdNext,
-    turnDurationMs: turnAdvanced ? currentTurnDurationMs : state.turnDurationMs,
-    turnEndsAt: hasNextCard ? (turnAdvanced ? context.now + currentTurnDurationMs : state.turnEndsAt) : null,
-    turnIndex: turnAdvanced ? state.turnIndex + 1 : state.turnIndex,
-    cardQueue: nextCardQueue,
-    currentCard: nextCard,
-    remainingCards: Math.max(nextCardQueue.length - 1, 0),
-    nextTeamExplainerIndexByTeamId,
-    nextDuelExplainerIndex
-  };
-
-  if (teamMode && options.solved && options.solvedTeamId) {
-    nextState.message = en
-      ? `${options.solvedPlayerName ?? fallbackPlayer} solved a term for ${resolveTeamLabel(options.solvedTeamId)}. More terms can follow in the same turn.`
-      : `${options.solvedPlayerName ?? fallbackPlayer} hat einen Begriff fuer ${resolveTeamLabel(options.solvedTeamId)} geloest. Weitere Begriffe koennen im selben Zug folgen.`;
-    return nextState;
-  }
-
-  if (teamMode && (options.timeout || options.advanceTeamTurn)) {
-    nextState.message = hasNextCard
-      ? en
-        ? `${resolveTeamLabel(currentTurnTeamIdNext ?? "team1")} is now up with ${getPlayerName(context.players, currentTurnPlayerId)}.`
-        : `${resolveTeamLabel(currentTurnTeamIdNext ?? "team1")} ist jetzt mit ${getPlayerName(context.players, currentTurnPlayerId)} dran.`
-      : noCardsMessage;
-    return nextState;
-  }
-
-  if (!teamMode && options.solved) {
-    nextState.message = hasNextCard
-      ? en
-        ? `${options.solvedPlayerName ?? fallbackPlayer} solved "${state.currentCard?.term ?? fallbackTerm}". Next explainer: ${getPlayerName(context.players, currentTurnPlayerId)}.`
-        : `${options.solvedPlayerName ?? fallbackPlayer} hat "${state.currentCard?.term ?? fallbackTerm}" geloest. Naechster Erklaerer: ${getPlayerName(context.players, currentTurnPlayerId)}.`
-      : en
-        ? `${options.solvedPlayerName ?? fallbackPlayer} solved the last term.`
-        : `${options.solvedPlayerName ?? fallbackPlayer} hat den letzten Begriff geloest.`;
-    return nextState;
-  }
-
-  if (!teamMode && options.timeout) {
-    nextState.message = hasNextCard
-      ? en
-        ? `${getPlayerName(context.players, currentTurnPlayerId)} explains next.`
-        : `${getPlayerName(context.players, currentTurnPlayerId)} erklaert als Naechstes.`
-      : noCardsMessage;
-    return nextState;
-  }
-
-  nextState.message = hasNextCard
-    ? en ? `${resolveModeLabel(mode, true)} continues.` : `${resolveModeLabel(mode)} laeuft weiter.`
-    : noCardsMessage;
-  return nextState;
+interface TurnAssignment {
+  explainerId?: string;
+  teamId?: BuzzwortTeamId;
+  watcherId?: string;
+  teamTurnCursor: Record<BuzzwortTeamId, number>;
+  watcherCursor: number;
 }
 
-function advanceOnSolve(state: TabuState, input: TabuInput, context: ServerGameContext): TabuState {
-  const remainingQueue = state.cardQueue.slice(1);
-  const nextCard = remainingQueue[0];
+/**
+ * Bestimmt Erklaerer und Waechter fuer den Zug `turnIndex`.
+ *
+ * Ein Waechter wird nur vergeben, wenn danach noch mindestens ein Rater uebrig
+ * bleibt. Sonst wuerde ein Zug mit niemandem zum Raten entstehen.
+ */
+function assignTurn(state: BuzzwortState, context: ServerGameContext, turnIndex: number): TurnAssignment {
+  const players = context.players;
+  const teamTurnCursor = { ...state.teamTurnCursor };
+  let watcherCursor = state.watcherCursor;
 
   if (state.mode === "team") {
-    const activeTeamId = resolveCurrentTurnTeamId(state);
+    const teamId: BuzzwortTeamId = turnIndex % 2 === 0 ? "team1" : "team2";
+    const ownMembers = livingMembers(state.teamMembersByTeamId[teamId] ?? [], players);
+    const enemyMembers = livingMembers(state.teamMembersByTeamId[opposingTeam(teamId)] ?? [], players);
+    const explainerId = ownMembers.length > 0 ? ownMembers[teamTurnCursor[teamId] % ownMembers.length] : players[0]?.id;
 
-    if (!activeTeamId || state.currentTurnPlayerId !== input.playerId) {
+    teamTurnCursor[teamId] = (teamTurnCursor[teamId] ?? 0) + 1;
+
+    const canWatch = state.watcherEnabled && ownMembers.length >= 2 && enemyMembers.length >= 1;
+    const watcherId = canWatch ? enemyMembers[watcherCursor % enemyMembers.length] : undefined;
+
+    if (canWatch) {
+      watcherCursor += 1;
+    }
+
+    return { explainerId, teamId, watcherId, teamTurnCursor, watcherCursor };
+  }
+
+  const order = state.turnOrderPlayerIds.filter((playerId) => players.some((player) => player.id === playerId));
+  const explainerId = order.length > 0 ? order[turnIndex % order.length] : players[0]?.id;
+  const canWatch = state.watcherEnabled && order.length >= 3;
+  const watcherId = canWatch ? order[(turnIndex + 1) % order.length] : undefined;
+
+  return { explainerId, teamId: undefined, watcherId, teamTurnCursor, watcherCursor };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Turn lifecycle                                                              */
+/* -------------------------------------------------------------------------- */
+
+function beginTurn(state: BuzzwortState, context: ServerGameContext, turnIndex: number): BuzzwortState {
+  const texts = resolveBuzzwortTexts(context.language);
+  const deck = resolveBuzzwortDeck(context.language);
+  const assignment = assignTurn(state, context, turnIndex);
+  const { card, queue } = drawCard(state.cardQueue, deck);
+  const explainerName = getPlayerName(context.players, texts, assignment.explainerId);
+
+  return {
+    ...state,
+    turnIndex,
+    turnPhase: "preview",
+    turnPhaseEndsAt: context.now + PREVIEW_MS,
+    turnEndsAt: null,
+    turnSolved: 0,
+    turnSkipsUsed: 0,
+    turnViolations: 0,
+    currentTurnPlayerId: assignment.explainerId,
+    currentTurnTeamId: assignment.teamId,
+    currentWatcherPlayerId: assignment.watcherId,
+    teamTurnCursor: assignment.teamTurnCursor,
+    watcherCursor: assignment.watcherCursor,
+    cardQueue: queue,
+    currentCard: card,
+    remainingCards: queue.length,
+    message: texts.getReady(explainerName)
+  };
+}
+
+function activateTurn(state: BuzzwortState, context: ServerGameContext): BuzzwortState {
+  const texts = resolveBuzzwortTexts(context.language);
+  const explainerName = getPlayerName(context.players, texts, state.currentTurnPlayerId);
+  const teamLabel = resolveTeamLabel(texts, state.currentTurnTeamId);
+  const watcherName = state.currentWatcherPlayerId
+    ? getPlayerName(context.players, texts, state.currentWatcherPlayerId)
+    : undefined;
+  const message = watcherName
+    ? texts.turnStartWithWatcher(explainerName, watcherName, teamLabel)
+    : texts.turnStart(explainerName, teamLabel);
+
+  return {
+    ...state,
+    turnPhase: "active",
+    turnPhaseEndsAt: context.now + state.turnDurationMs,
+    turnEndsAt: context.now + state.turnDurationMs,
+    message,
+    events: pushEvent(state.events, {
+      kind: "turn_start",
+      at: context.now,
+      actorName: explainerName,
+      targetName: watcherName,
+      teamId: state.currentTurnTeamId
+    })
+  };
+}
+
+function endTurn(state: BuzzwortState, context: ServerGameContext): BuzzwortState {
+  const texts = resolveBuzzwortTexts(context.language);
+  const explainerName = getPlayerName(context.players, texts, state.currentTurnPlayerId);
+  const summary = texts.turnSummary(explainerName, state.turnSolved, state.turnViolations);
+
+  return {
+    ...state,
+    turnPhase: "handover",
+    turnPhaseEndsAt: context.now + HANDOVER_MS,
+    turnEndsAt: null,
+    lastTurnSummary: summary,
+    message: summary,
+    events: pushEvent(state.events, {
+      kind: "turn_end",
+      at: context.now,
+      actorName: explainerName,
+      teamId: state.currentTurnTeamId,
+      points: state.turnSolved
+    })
+  };
+}
+
+function completeRound(state: BuzzwortState, context: ServerGameContext): BuzzwortState {
+  const texts = resolveBuzzwortTexts(context.language);
+
+  if (state.mode === "team") {
+    const a = state.scoreByTeamId.team1 ?? 0;
+    const b = state.scoreByTeamId.team2 ?? 0;
+    const winner = a === b ? null : resolveTeamLabel(texts, a > b ? "team1" : "team2") ?? null;
+
+    return {
+      ...state,
+      roundComplete: true,
+      turnPhase: "handover",
+      turnPhaseEndsAt: null,
+      turnEndsAt: null,
+      currentCard: undefined,
+      message: texts.finalTeam(winner, a, b)
+    };
+  }
+
+  const ranked = Object.entries(state.scoreByPlayerId).sort((left, right) => right[1] - left[1]);
+  const leader = ranked[0];
+
+  return {
+    ...state,
+    roundComplete: true,
+    turnPhase: "handover",
+    turnPhaseEndsAt: null,
+    turnEndsAt: null,
+    currentCard: undefined,
+    message: texts.finalDuel(leader ? getPlayerName(context.players, texts, leader[0]) : null, leader?.[1] ?? 0)
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Player actions                                                              */
+/* -------------------------------------------------------------------------- */
+
+function addTeamScore(
+  scoreByTeamId: Record<BuzzwortTeamId, number>,
+  teamId: BuzzwortTeamId | undefined,
+  delta: number
+): Record<BuzzwortTeamId, number> {
+  if (!teamId) {
+    return scoreByTeamId;
+  }
+
+  return { ...scoreByTeamId, [teamId]: (scoreByTeamId[teamId] ?? 0) + delta };
+}
+
+function addPlayerScore(
+  scoreByPlayerId: Record<string, number>,
+  playerId: string | undefined,
+  delta: number
+): Record<string, number> {
+  if (!playerId) {
+    return scoreByPlayerId;
+  }
+
+  return { ...scoreByPlayerId, [playerId]: (scoreByPlayerId[playerId] ?? 0) + delta };
+}
+
+function nextCardState(state: BuzzwortState, context: ServerGameContext): Pick<BuzzwortState, "cardQueue" | "currentCard" | "remainingCards"> {
+  const deck = resolveBuzzwortDeck(context.language);
+  const { card, queue } = drawCard(state.cardQueue, deck);
+
+  return { cardQueue: queue, currentCard: card, remainingCards: queue.length };
+}
+
+function handleCorrect(state: BuzzwortState, input: BuzzwortInput, context: ServerGameContext): BuzzwortState {
+  if (state.currentTurnPlayerId !== input.playerId || !state.currentCard) {
+    return state;
+  }
+
+  const texts = resolveBuzzwortTexts(context.language);
+  const term = state.currentCard.term;
+  let scoreByPlayerId = state.scoreByPlayerId;
+  let scoreByTeamId = state.scoreByTeamId;
+  let solverName: string;
+
+  if (state.mode === "team") {
+    scoreByTeamId = addTeamScore(scoreByTeamId, state.currentTurnTeamId, 1);
+    scoreByPlayerId = addPlayerScore(scoreByPlayerId, input.playerId, 1);
+    solverName = resolveTeamLabel(texts, state.currentTurnTeamId) ?? getPlayerName(context.players, texts, input.playerId);
+  } else {
+    const guesser = context.players.find(
+      (player) => player.id === input.guessedPlayerId && player.id !== input.playerId
+    );
+
+    if (!guesser) {
       return state;
     }
 
-    const playerName = getPlayerName(context.players, input.playerId);
-    return createNextTurnState(state, context, remainingQueue, nextCard, {
-      solved: true,
-      solvedPlayerId: input.playerId,
-      solvedPlayerName: playerName,
-      solvedTeamId: activeTeamId,
-      advanceTeamTurn: false
-    });
+    if (guesser.id === state.currentWatcherPlayerId) {
+      // Der Waechter kennt die Karte und darf nicht punkten.
+      return state;
+    }
+
+    scoreByPlayerId = addPlayerScore(scoreByPlayerId, guesser.id, 1);
+    scoreByPlayerId = addPlayerScore(scoreByPlayerId, input.playerId, 1);
+    solverName = guesser.name;
   }
 
-  if (state.currentTurnPlayerId !== input.playerId) {
-    return state;
-  }
-
-  if (!input.guessedPlayerId || input.guessedPlayerId === input.playerId) {
-    return state;
-  }
-
-  const guessedPlayer = context.players.find((player) => player.id === input.guessedPlayerId);
-
-  if (!guessedPlayer) {
-    return state;
-  }
-
-  return createNextTurnState(state, context, remainingQueue, nextCard, {
-    solved: true,
-    solvedPlayerId: guessedPlayer.id,
-    solvedPlayerName: guessedPlayer.name
-  });
+  return {
+    ...state,
+    ...nextCardState(state, context),
+    scoreByPlayerId,
+    scoreByTeamId,
+    solvedTerms: state.solvedTerms + 1,
+    turnSolved: state.turnSolved + 1,
+    lastSolvedTerm: term,
+    lastSolverName: solverName,
+    message: texts.solved(term, solverName),
+    events: pushEvent(state.events, {
+      kind: "solved",
+      at: context.now,
+      term,
+      actorName: solverName,
+      teamId: state.currentTurnTeamId,
+      points: 1
+    })
+  };
 }
 
-function advanceOnTimeout(state: TabuState, context: ServerGameContext): TabuState {
-  const remainingQueue = state.cardQueue.slice(1);
-  const nextCard = remainingQueue[0];
+function handleSkip(state: BuzzwortState, input: BuzzwortInput, context: ServerGameContext): BuzzwortState {
+  if (state.currentTurnPlayerId !== input.playerId || !state.currentCard) {
+    return state;
+  }
+
+  if (state.turnSkipsUsed >= state.maxSkipsPerTurn) {
+    return state;
+  }
+
+  const texts = resolveBuzzwortTexts(context.language);
+  const term = state.currentCard.term;
+
+  return {
+    ...state,
+    ...nextCardState(state, context),
+    turnSkipsUsed: state.turnSkipsUsed + 1,
+    message: texts.skipped(term),
+    events: pushEvent(state.events, {
+      kind: "skipped",
+      at: context.now,
+      term,
+      actorName: getPlayerName(context.players, texts, input.playerId)
+    })
+  };
+}
+
+function handleViolation(state: BuzzwortState, input: BuzzwortInput, context: ServerGameContext): BuzzwortState {
+  if (state.currentWatcherPlayerId !== input.playerId || !state.currentCard) {
+    return state;
+  }
+
+  const texts = resolveBuzzwortTexts(context.language);
+  const term = state.currentCard.term;
+  const watcherName = getPlayerName(context.players, texts, input.playerId);
+  const watcherTeamId = state.mode === "team" ? state.teamByPlayerId[input.playerId] : undefined;
+
+  return {
+    ...state,
+    ...nextCardState(state, context),
+    turnViolations: state.turnViolations + 1,
+    scoreByTeamId: addTeamScore(state.scoreByTeamId, watcherTeamId, 1),
+    scoreByPlayerId: addPlayerScore(state.scoreByPlayerId, input.playerId, 1),
+    message: texts.violation(term, watcherName),
+    events: pushEvent(state.events, {
+      kind: "buzz",
+      at: context.now,
+      term,
+      actorName: watcherName,
+      teamId: watcherTeamId,
+      points: 1
+    })
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* View state                                                                  */
+/* -------------------------------------------------------------------------- */
+
+function resolveRole(state: BuzzwortState, playerId?: string): BuzzwortRole {
+  if (!playerId) {
+    return "bench";
+  }
+
+  if (state.currentTurnPlayerId === playerId) {
+    return "explainer";
+  }
+
+  if (state.currentWatcherPlayerId === playerId) {
+    return "watcher";
+  }
 
   if (state.mode === "team") {
-    return createNextTurnState(state, context, remainingQueue, nextCard, {
-      timeout: true,
-      advanceTeamTurn: true
-    });
+    return state.teamByPlayerId[playerId] === state.currentTurnTeamId ? "guesser" : "bench";
   }
 
-  return createNextTurnState(state, context, remainingQueue, nextCard, {
-    timeout: true
-  });
+  return "guesser";
 }
 
-function resolveInitialTeamTurn(
-  state: TabuState,
-  context: ServerGameContext
-): Pick<TabuState, "currentTurnPlayerId" | "currentTurnTeamId" | "nextTeamExplainerIndexByTeamId"> {
-  const nextTeamExplainerIndexByTeamId = { ...state.nextTeamExplainerIndexByTeamId };
-  const currentTurnTeamId: TabuTeamId = "team1";
-  const currentTurnPlayerId = resolveTeamExplainerId(
-    state.teamMembersByTeamId,
-    currentTurnTeamId,
-    nextTeamExplainerIndexByTeamId,
-    context.players
-  );
+function remainingMs(endsAt: number | null, now: number): number | null {
+  return endsAt === null ? null : Math.max(0, endsAt - now);
+}
 
-  nextTeamExplainerIndexByTeamId.team1 = (nextTeamExplainerIndexByTeamId.team1 ?? 0) + 1;
+function buildViewState(
+  state: BuzzwortState,
+  context: ServerGameContext,
+  playerId?: string
+): BuzzwortControllerState {
+  const texts = resolveBuzzwortTexts(context.language);
+  const role = playerId ? resolveRole(state, playerId) : "bench";
+  const canSeeCard = role === "explainer" || role === "watcher";
+  const guessTargetPlayerIds =
+    state.mode === "duel" && role === "explainer"
+      ? context.players
+          .map((player) => player.id)
+          .filter((candidate) => candidate !== playerId && candidate !== state.currentWatcherPlayerId)
+      : [];
 
   return {
-    currentTurnPlayerId,
-    currentTurnTeamId,
-    nextTeamExplainerIndexByTeamId
+    mode: state.mode,
+    modeLabel: resolveModeLabel(texts, state.mode),
+    watcherEnabled: state.watcherEnabled,
+
+    turnPhase: state.turnPhase,
+    turnPhaseRemainingMs: remainingMs(state.turnPhaseEndsAt, context.now),
+    turnDurationMs: state.turnDurationMs,
+    turnEndsAt: state.turnEndsAt,
+    turnRemainingMs: remainingMs(state.turnEndsAt, context.now),
+
+    turnIndex: state.turnIndex,
+    totalTurns: state.totalTurns,
+
+    role,
+    roleLabel: resolveRoleLabel(texts, role),
+    isExplainer: role === "explainer",
+    isWatcher: role === "watcher",
+
+    card:
+      canSeeCard && state.currentCard
+        ? {
+            term: state.currentCard.term,
+            forbidden: state.currentCard.forbidden,
+            category: state.currentCard.category,
+            difficulty: state.currentCard.difficulty
+          }
+        : undefined,
+
+    turnSolved: state.turnSolved,
+    skipsLeft: Math.max(0, state.maxSkipsPerTurn - state.turnSkipsUsed),
+    turnViolations: state.turnViolations,
+
+    currentTurnPlayerId: state.currentTurnPlayerId,
+    currentTurnTeamId: state.currentTurnTeamId,
+    currentWatcherPlayerId: state.currentWatcherPlayerId,
+    activeTeamLabel: resolveTeamLabel(texts, state.currentTurnTeamId),
+    myTeamId: playerId ? state.teamByPlayerId[playerId] : undefined,
+
+    scoreByPlayerId: state.scoreByPlayerId,
+    scoreByTeamId: state.scoreByTeamId,
+    teamByPlayerId: state.teamByPlayerId,
+    teamMembersByTeamId: state.teamMembersByTeamId,
+
+    guessTargetPlayerIds,
+    remainingCards: state.remainingCards,
+    solvedTerms: state.solvedTerms,
+    lastSolvedTerm: state.lastSolvedTerm,
+    lastSolverName: state.lastSolverName,
+    lastTurnSummary: state.lastTurnSummary,
+    events: state.events
   };
 }
 
-function resolveInitialDuelTurn(
-  state: TabuState,
-  context: ServerGameContext
-): Pick<TabuState, "currentTurnPlayerId" | "currentTurnTeamId" | "nextDuelExplainerIndex"> {
-  const nextDuelExplainerIndex = state.nextDuelExplainerIndex;
-  const currentTurnPlayerId =
-    state.turnOrderPlayerIds.length > 0
-      ? state.turnOrderPlayerIds[nextDuelExplainerIndex % state.turnOrderPlayerIds.length]
-      : context.players[0]?.id;
+/* -------------------------------------------------------------------------- */
+/* Server game                                                                 */
+/* -------------------------------------------------------------------------- */
 
-  return {
-    currentTurnPlayerId,
-    currentTurnTeamId: undefined,
-    nextDuelExplainerIndex: nextDuelExplainerIndex + 1
-  };
-}
-
-export const serverGame: ServerGame<TabuState, TabuInput, TabuControllerState> = {
-  manifest: tabuManifest,
+export const serverGame: ServerGame<BuzzwortState, BuzzwortInput, BuzzwortControllerState> = {
+  manifest: buzzwortManifest,
   createInitialState(context) {
     const mode = resolveMode(context.roomSettings);
+    const texts = resolveBuzzwortTexts(context.language);
 
     return {
       ...createBaseRoundState("round_intro", context.now, {
         durationMs: roundPhaseDurations.roundIntroMs,
-        message: context.language === "en" ? "Preparing Taboo." : "Tabu wird vorbereitet."
+        message: texts.preparing
       }),
       mode,
-      solvedTerms: 0,
-      targetTerms: DEFAULT_TARGET_TERMS,
-      lastSolverPlayerId: undefined,
-      lastSolverName: undefined,
-      lastSolvedTerm: undefined,
-      solvedByPlayerId: {},
-      solvedByTeamId: {
-        team1: 0,
-        team2: 0
-      },
-      teamByPlayerId: {},
-      teamMembersByTeamId: {
-        team1: [],
-        team2: []
-      },
-      nextTeamExplainerIndexByTeamId: {
-        team1: 0,
-        team2: 0
-      },
-      turnOrderPlayerIds: [],
-      nextDuelExplainerIndex: 0,
+      watcherEnabled: resolveWatcherEnabled(context.roomSettings),
+
+      turnPhase: "preview",
+      turnPhaseEndsAt: null,
+      turnDurationMs: resolveTurnDurationMs(context.roomSettings),
+      turnEndsAt: null,
+
+      turnIndex: 0,
+      totalTurns: totalTurnsFor(mode, context.players.length),
+      roundComplete: false,
+
+      turnSolved: 0,
+      turnSkipsUsed: 0,
+      turnViolations: 0,
+      maxSkipsPerTurn: MAX_SKIPS_PER_TURN,
+
       currentTurnPlayerId: undefined,
       currentTurnTeamId: undefined,
-      turnDurationMs: mode === "team" ? TEAM_TURN_DURATION_MS : DUEL_TURN_DURATION_MS,
-      turnEndsAt: null,
-      turnIndex: 0,
+      currentWatcherPlayerId: undefined,
+
+      scoreByPlayerId: {},
+      scoreByTeamId: { team1: 0, team2: 0 },
+      teamByPlayerId: {},
+      teamMembersByTeamId: { team1: [], team2: [] },
+
+      turnOrderPlayerIds: [],
+      teamTurnCursor: { team1: 0, team2: 0 },
+      watcherCursor: 0,
+
       cardQueue: [],
       currentCard: undefined,
-      remainingCards: 0
+      remainingCards: 0,
+
+      solvedTerms: 0,
+      lastSolvedTerm: undefined,
+      lastSolverName: undefined,
+      lastTurnSummary: undefined,
+      events: []
     };
   },
   handleHostAction(_state, action, _context) {
-    const hostAction = action as Partial<TabuHostAction> | null;
+    const hostAction = action as Partial<BuzzwortHostAction> | null;
 
-    if (hostAction?.type !== "set_mode" || (hostAction.mode !== "duel" && hostAction.mode !== "team")) {
-      return {};
+    if (hostAction?.type === "set_mode" && (hostAction.mode === "duel" || hostAction.mode === "team")) {
+      return { roomSettings: { [MODE_SETTING_KEY]: hostAction.mode } };
     }
 
-    return {
-      roomSettings: {
-        [TABU_MODE_ROOM_SETTING_KEY]: hostAction.mode
-      }
-    };
+    if (hostAction?.type === "set_watcher" && typeof hostAction.watcherEnabled === "boolean") {
+      return { roomSettings: { [WATCHER_SETTING_KEY]: hostAction.watcherEnabled } };
+    }
+
+    if (
+      hostAction?.type === "set_turn_duration" &&
+      typeof hostAction.turnDurationMs === "number" &&
+      BUZZWORT_TURN_DURATION_OPTIONS.includes(hostAction.turnDurationMs as (typeof BUZZWORT_TURN_DURATION_OPTIONS)[number])
+    ) {
+      return { roomSettings: { [TURN_MS_SETTING_KEY]: hostAction.turnDurationMs } };
+    }
+
+    return {};
   },
   startRound(state, context) {
     const mode = resolveMode(context.roomSettings);
-    const cardQueue = shuffle(tabuCards);
-    const targetTerms = Math.min(DEFAULT_TARGET_TERMS, cardQueue.length);
+    const texts = resolveBuzzwortTexts(context.language);
+    const deck = resolveBuzzwortDeck(context.language);
     const teamAssignments = buildTeamAssignments(context.players);
-    const turnOrderPlayerIds = buildTurnOrder(context.players);
-    let currentTurnPlayerId: string | undefined;
-    let currentTurnTeamId: TabuTeamId | undefined;
-    let nextTeamExplainerIndexByTeamId: Record<TabuTeamId, number>;
-    let nextDuelExplainerIndex: number;
+    const cardQueue = shuffle(deck);
 
-    if (mode === "team") {
-      const teamState = resolveInitialTeamTurn(
-        {
-          ...state,
-          mode,
-          solvedByTeamId: {
-            team1: 0,
-            team2: 0
-          },
-          teamByPlayerId: teamAssignments.teamByPlayerId,
-          teamMembersByTeamId: teamAssignments.teamMembersByTeamId,
-          nextTeamExplainerIndexByTeamId: {
-            team1: 0,
-            team2: 0
-          },
-          turnOrderPlayerIds,
-          nextDuelExplainerIndex: 0
-        },
-        context
-      );
-      currentTurnPlayerId = teamState.currentTurnPlayerId;
-      currentTurnTeamId = teamState.currentTurnTeamId;
-      nextTeamExplainerIndexByTeamId = teamState.nextTeamExplainerIndexByTeamId;
-      nextDuelExplainerIndex = 0;
-    } else {
-      const duelState = resolveInitialDuelTurn(
-        {
-          ...state,
-          mode,
-          teamByPlayerId: {},
-          teamMembersByTeamId: {
-            team1: [],
-            team2: []
-          },
-          nextTeamExplainerIndexByTeamId: {
-            team1: 0,
-            team2: 0
-          },
-          turnOrderPlayerIds,
-          nextDuelExplainerIndex: state.nextDuelExplainerIndex
-        },
-        context
-      );
-      currentTurnPlayerId = duelState.currentTurnPlayerId;
-      currentTurnTeamId = duelState.currentTurnTeamId;
-      nextTeamExplainerIndexByTeamId = {
-        team1: 0,
-        team2: 0
-      };
-      nextDuelExplainerIndex = duelState.nextDuelExplainerIndex;
-    }
-    const currentCard = cardQueue[0];
-    const turnDurationMs = mode === "team" ? TEAM_TURN_DURATION_MS : DUEL_TURN_DURATION_MS;
-    const en = context.language === "en";
-    const startMessage = currentCard
-      ? mode === "team"
-        ? en
-          ? `Taboo in ${resolveModeLabel(mode, true)}. ${resolveTeamLabel("team1")} starts with ${getPlayerName(context.players, currentTurnPlayerId)}.`
-          : `Tabu im ${resolveModeLabel(mode)}. ${resolveTeamLabel("team1")} beginnt mit ${getPlayerName(context.players, currentTurnPlayerId)}.`
-        : en
-          ? `Taboo in ${resolveModeLabel(mode, true)}. ${getPlayerName(context.players, currentTurnPlayerId)} starts.`
-          : `Tabu im ${resolveModeLabel(mode)}. ${getPlayerName(context.players, currentTurnPlayerId)} beginnt.`
-      : en ? "No Taboo cards available." : "Keine Tabu-Karten verfuegbar.";
+    const base: BuzzwortState = {
+      ...state,
+      mode,
+      // Im Teammodus gehoert der Waechter zu den Regeln und ist immer aktiv.
+      watcherEnabled: mode === "team" ? true : resolveWatcherEnabled(context.roomSettings),
+      turnDurationMs: resolveTurnDurationMs(context.roomSettings),
+      turnIndex: 0,
+      totalTurns: totalTurnsFor(mode, context.players.length),
+      roundComplete: false,
+      turnSolved: 0,
+      turnSkipsUsed: 0,
+      turnViolations: 0,
+      maxSkipsPerTurn: MAX_SKIPS_PER_TURN,
+      scoreByPlayerId: {},
+      scoreByTeamId: { team1: 0, team2: 0 },
+      teamByPlayerId: mode === "team" ? teamAssignments.teamByPlayerId : {},
+      teamMembersByTeamId:
+        mode === "team" ? teamAssignments.teamMembersByTeamId : { team1: [], team2: [] },
+      turnOrderPlayerIds: shuffle(context.players.map((player) => player.id)),
+      teamTurnCursor: { team1: 0, team2: 0 },
+      watcherCursor: 0,
+      cardQueue,
+      currentCard: undefined,
+      remainingCards: cardQueue.length,
+      solvedTerms: 0,
+      lastSolvedTerm: undefined,
+      lastSolverName: undefined,
+      lastTurnSummary: undefined,
+      events: []
+    };
 
-    return transitionRoundState(
-      {
-        ...state,
-        mode,
-        solvedTerms: 0,
-        targetTerms,
-        lastSolverPlayerId: undefined,
-        lastSolverName: undefined,
-        lastSolvedTerm: undefined,
-        solvedByPlayerId: {},
-        solvedByTeamId: {
-          team1: 0,
-          team2: 0
-        },
-        teamByPlayerId: teamAssignments.teamByPlayerId,
-        teamMembersByTeamId: teamAssignments.teamMembersByTeamId,
-        nextTeamExplainerIndexByTeamId,
-        turnOrderPlayerIds,
-        nextDuelExplainerIndex,
-        currentTurnPlayerId,
-        currentTurnTeamId,
-        turnDurationMs,
-        turnEndsAt: currentCard ? context.now + turnDurationMs : null,
-        turnIndex: 0,
-        cardQueue,
-        currentCard,
-        remainingCards: Math.max(cardQueue.length - 1, 0),
-        message: startMessage
-      },
-      "playing",
-      context.now,
-      {
-        startedAt: context.now,
-        message: startMessage
-      }
-    );
+    const opened = beginTurn(base, context, 0);
+    const startMessage = opened.currentCard ? opened.message : texts.noCards;
+
+    return transitionRoundState({ ...opened, message: startMessage }, "playing", context.now, {
+      startedAt: context.now,
+      message: startMessage
+    });
   },
   handleInput(state, input, context) {
-    if (state.phase !== "playing" || !state.currentCard) {
+    if (state.phase !== "playing" || state.turnPhase !== "active" || state.roundComplete) {
       return state;
     }
 
-    if (input.type !== "tabu_correct") {
-      return state;
+    switch (input.type) {
+      case "buzzwort_correct":
+        return handleCorrect(state, input, context);
+      case "buzzwort_skip":
+        return handleSkip(state, input, context);
+      case "buzzwort_violation":
+        return handleViolation(state, input, context);
+      default:
+        return state;
     }
-
-    return advanceOnSolve(state, input, context);
   },
   tick(state, _deltaMs, context) {
-    if (state.phase !== "playing" || !state.currentCard || state.turnEndsAt === null) {
+    if (state.phase !== "playing" || state.roundComplete) {
       return state;
     }
 
-    if (context.now < state.turnEndsAt) {
+    if (!state.currentCard && state.turnPhase !== "handover") {
+      return completeRound(state, context);
+    }
+
+    if (state.turnPhaseEndsAt === null || context.now < state.turnPhaseEndsAt) {
       return state;
     }
 
-    return advanceOnTimeout(state, context);
+    if (state.turnPhase === "preview") {
+      return activateTurn(state, context);
+    }
+
+    if (state.turnPhase === "active") {
+      return endTurn(state, context);
+    }
+
+    const nextTurnIndex = state.turnIndex + 1;
+
+    if (nextTurnIndex >= state.totalTurns) {
+      return completeRound(state, context);
+    }
+
+    return beginTurn(state, context, nextTurnIndex);
   },
   isRoundFinished(state) {
-    return state.phase === "playing" && (state.solvedTerms >= state.targetTerms || !state.currentCard);
+    return state.phase === "playing" && state.roundComplete;
   },
   buildScore(state) {
-    return buildTabuScoreEntries({
+    return buildBuzzwortScoreEntries({
       mode: state.mode,
-      solvedByPlayerId: state.solvedByPlayerId,
-      solvedByTeamId: state.solvedByTeamId,
+      scoreByPlayerId: state.scoreByPlayerId,
+      scoreByTeamId: state.scoreByTeamId,
       teamMembersByTeamId: state.teamMembersByTeamId
     });
   },
   toPublicState(state, context) {
-    return buildPublicState(state, context.now, context.language === "en");
+    return buildViewState(state, context);
   },
   toControllerStateForPlayer(state, context, playerId) {
-    return buildCommonControllerState(state, context, playerId);
+    return buildViewState(state, context, playerId);
   }
 };
+
+export type { BuzzwortState, BuzzwortControllerState, BuzzwortEventKind };

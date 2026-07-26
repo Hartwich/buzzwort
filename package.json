@@ -1,7 +1,7 @@
 {
-  "name": "@open-party-lab/game-tabu",
+  "name": "@open-party-lab/game-buzzwort",
   "version": "0.1.0",
-  "description": "Taboo-inspired word explanation game for Open Party Lab with team and party flow.",
+  "description": "Fast-paced word explanation party game: describe the term without saying any of the blocked words while a watcher listens in.",
   "private": false,
   "license": "Apache-2.0",
   "type": "module",
