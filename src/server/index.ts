@@ -1,3 +1,4 @@
+// Modified for LAN Party Hub; see CHANGES.md and NOTICE.md.
 import {
   createBaseRoundState,
   roundPhaseDurations,
@@ -699,12 +700,13 @@ export const serverGame: ServerGame<BuzzwortState, BuzzwortInput, BuzzwortContro
   isRoundFinished(state) {
     return state.phase === "playing" && state.roundComplete;
   },
-  buildScore(state) {
+  buildScore(state, context) {
     return buildBuzzwortScoreEntries({
       mode: state.mode,
       scoreByPlayerId: state.scoreByPlayerId,
       scoreByTeamId: state.scoreByTeamId,
-      teamMembersByTeamId: state.teamMembersByTeamId
+      teamMembersByTeamId: state.teamMembersByTeamId,
+      language: context.language
     });
   },
   toPublicState(state, context) {

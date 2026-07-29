@@ -1,3 +1,4 @@
+// Modified for LAN Party Hub; see CHANGES.md and NOTICE.md.
 export const hostTheme = {
   panel: "#070d1c",
   backgroundTop: 0x0b1226,
@@ -17,9 +18,9 @@ export const hostTheme = {
   team1: 0x60a5fa,
   team2: 0xf472b6,
 
-  titleFont: '"Space Grotesk", sans-serif',
-  bodyFont: '"Nunito Sans", sans-serif',
-  monoFont: '"JetBrains Mono", Consolas, monospace',
+  titleFont: '"Space Grotesk", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
+  bodyFont: '"Nunito Sans", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
+  monoFont: '"JetBrains Mono", "Microsoft YaHei", "PingFang SC", Consolas, monospace',
 
   text: "#f8fafc",
   muted: "#94a3b8",

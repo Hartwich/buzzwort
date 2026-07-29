@@ -1,4 +1,5 @@
-﻿name: CI
+﻿# Modified for LAN Party Hub; see CHANGES.md and NOTICE.md.
+name: CI
 
 on:
   pull_request:
@@ -58,6 +59,10 @@ jobs:
       - name: Run build
         working-directory: game
         run: npm run build
+
+      - name: Run tests
+        working-directory: game
+        run: npm test
 
       - name: Dry-run npm package
         working-directory: game

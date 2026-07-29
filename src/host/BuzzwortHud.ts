@@ -1,5 +1,6 @@
+// Modified for LAN Party Hub; see CHANGES.md and NOTICE.md.
 import Phaser from "phaser";
-import type { SupportedLanguage } from "@open-party-lab/game-core";
+import { localizeBuzzwort, type BuzzwortLanguage } from "../language.js";
 import type { BuzzwortMode } from "../protocol.js";
 import { hostTheme } from "./theme.js";
 
@@ -15,7 +16,7 @@ export interface BuzzwortHudModel {
   watcherEnabled: boolean;
   turnDurationMs: number;
   locked: boolean;
-  language?: SupportedLanguage;
+  language?: BuzzwortLanguage;
 }
 
 interface Chip {
@@ -176,32 +177,38 @@ export class BuzzwortHud {
   }
 
   update(model: BuzzwortHudModel): void {
-    const en = model.language === "en";
+    const text = <T>(zhCn: T, en: T, de: T) => localizeBuzzwort(model.language, zhCn, en, de);
 
-    this.roomLabel.setText(`${en ? "ROOM" : "RAUM"} ${model.roomCode}`);
+    this.roomLabel.setText(`${text("房间", "ROOM", "RAUM")} ${model.roomCode}`);
+    this.title.setText(text("禁词挑战", "BUZZWORT", "BUZZWORT"));
     this.hint.setText(
       model.locked
-        ? en
-          ? "Settings are locked while a round is running."
-          : "Einstellungen sind während einer laufenden Runde gesperrt."
-        : en
-          ? "Pick mode, watcher and turn length before you start."
-          : "Modus, Wächter und Zuglänge vor dem Start wählen."
+        ? text(
+            "回合进行中，无法修改设置。",
+            "Settings are locked while a round is running.",
+            "Einstellungen sind während einer laufenden Runde gesperrt."
+          )
+        : text(
+            "开始前请选择模式、监督员和回合时长。",
+            "Pick mode, watcher and turn length before you start.",
+            "Modus, Wächter und Zuglänge vor dem Start wählen."
+          )
     );
 
-    this.setChip("mode:duel", en ? "Free-for-all" : "Jeder gegen jeden", model.mode === "duel", model.locked);
-    this.setChip("mode:team", en ? "Team mode" : "Teammodus", model.mode === "team", model.locked);
+    this.setChip(
+      "mode:duel",
+      text("自由对战", "Free-for-all", "Jeder gegen jeden"),
+      model.mode === "duel",
+      model.locked
+    );
+    this.setChip("mode:team", text("团队模式", "Team mode", "Teammodus"), model.mode === "team", model.locked);
 
     const watcherLocked = model.locked || model.mode === "team";
     this.setChip(
       "watcher",
       model.watcherEnabled
-        ? en
-          ? "Watcher: on"
-          : "Wächter: an"
-        : en
-          ? "Watcher: off"
-          : "Wächter: aus",
+        ? text("监督员：开", "Watcher: on", "Wächter: an")
+        : text("监督员：关", "Watcher: off", "Wächter: aus"),
       model.watcherEnabled,
       watcherLocked
     );
@@ -222,7 +229,7 @@ export class BuzzwortHud {
     for (const durationMs of [45_000, 60_000, 90_000]) {
       this.setChip(
         `time:${durationMs}`,
-        `${durationMs / 1000}s`,
+        text(`${durationMs / 1000}秒`, `${durationMs / 1000}s`, `${durationMs / 1000}s`),
         model.turnDurationMs === durationMs,
         model.locked
       );

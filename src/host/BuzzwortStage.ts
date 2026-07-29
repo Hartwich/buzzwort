@@ -1,5 +1,11 @@
+// Modified for LAN Party Hub; see CHANGES.md and NOTICE.md.
 import Phaser from "phaser";
-import type { SupportedLanguage } from "@open-party-lab/game-core";
+import {
+  localizeBuzzwort,
+  resolveBuzzwortLanguage,
+  type BuzzwortLanguage,
+  type ResolvedBuzzwortLanguage
+} from "../language.js";
 import type { BuzzwortControllerState, BuzzwortEvent, BuzzwortTeamId } from "../protocol.js";
 import { hostTheme } from "./theme.js";
 import { BUZZWORT_HUD_HEIGHT } from "./BuzzwortHud.js";
@@ -9,7 +15,7 @@ export interface BuzzwortStageModel {
   playerNames: Map<string, string>;
   playerCount: number;
   message?: string;
-  language?: SupportedLanguage;
+  language?: BuzzwortLanguage;
 }
 
 const RING_RADIUS = 116;
@@ -354,11 +360,11 @@ export class BuzzwortStage {
 
   update(model: BuzzwortStageModel, now: number): void {
     const state = model.state;
-    const en = model.language === "en";
+    const language = resolveBuzzwortLanguage(model.language);
 
     // Der Ring laeuft jeden Frame, der Rest reicht mit ~10 Hz.
-    this.updateRing(state, now, en);
-    this.detectEvents(state, now);
+    this.updateRing(state, now, language);
+    this.detectEvents(state, now, language);
     this.updateFlash(now);
 
     if (now < this.nextSlowUpdateAt) {
@@ -366,12 +372,17 @@ export class BuzzwortStage {
     }
 
     this.nextSlowUpdateAt = now + 100;
-    this.updateCenter(state, model, en);
-    this.updateSide(state, model, en);
-    this.updateMessage(model, en);
+    this.updateCenter(state, model, language);
+    this.updateSide(state, model, language);
+    this.updateMessage(model, language);
   }
 
-  private updateRing(state: BuzzwortControllerState | undefined, now: number, en: boolean): void {
+  private updateRing(
+    state: BuzzwortControllerState | undefined,
+    now: number,
+    language: ResolvedBuzzwortLanguage
+  ): void {
+    const text = <T>(zhCn: T, en: T, de: T) => localizeBuzzwort(language, zhCn, en, de);
     const active = state?.turnPhase === "active" && state.turnEndsAt !== null;
     const preview = state?.turnPhase === "preview";
     const remaining = active
@@ -418,39 +429,26 @@ export class BuzzwortStage {
 
     this.ringCaption.setText(
       preview
-        ? en
-          ? "starting"
-          : "Start gleich"
+        ? text("即将开始", "starting", "Start gleich")
         : active
-          ? en
-            ? "seconds left"
-            : "Sekunden übrig"
-          : en
-            ? "waiting"
-            : "Pause"
+          ? text("剩余（秒）", "seconds left", "Sekunden übrig")
+          : text("等待中", "waiting", "Pause")
     );
   }
 
   private updateCenter(
     state: BuzzwortControllerState | undefined,
     model: BuzzwortStageModel,
-    en: boolean
+    language: ResolvedBuzzwortLanguage
   ): void {
+    const text = <T>(zhCn: T, en: T, de: T) => localizeBuzzwort(language, zhCn, en, de);
     const phaseText = !state
-      ? en
-        ? "Lobby"
-        : "Lobby"
+      ? text("大厅", "Lobby", "Lobby")
       : state.turnPhase === "preview"
-        ? en
-          ? "GET READY"
-          : "BEREIT MACHEN"
+        ? text("准备开始", "GET READY", "BEREIT MACHEN")
         : state.turnPhase === "active"
-          ? en
-            ? "EXPLAINING"
-            : "ES LÄUFT"
-          : en
-            ? "TURN OVER"
-            : "ZUG VORBEI";
+          ? text("讲解中", "EXPLAINING", "ES LÄUFT")
+          : text("本回合结束", "TURN OVER", "ZUG VORBEI");
 
     this.phaseLabel.setText(phaseText);
 
@@ -468,13 +466,13 @@ export class BuzzwortStage {
 
     const explainerName = state?.currentTurnPlayerId
       ? model.playerNames.get(state.currentTurnPlayerId) ?? state.currentTurnPlayerId
-      : en
-        ? "Waiting for players"
-        : "Warte auf Spieler";
+      : text("等待玩家", "Waiting for players", "Warte auf Spieler");
     const teamLabel = state?.activeTeamLabel;
 
     this.explainerLabel.setText(
-      teamLabel ? `${teamLabel} · ${en ? "explains" : "erklärt"}` : en ? "Explainer" : "Erklärer"
+      teamLabel
+        ? `${teamLabel} · ${text("讲解", "explains", "erklärt")}`
+        : text("讲解员", "Explainer", "Erklärer")
     );
     this.explainerName.setText(explainerName);
     this.explainerName.setColor(
@@ -491,39 +489,40 @@ export class BuzzwortStage {
 
     this.watcherLine.setText(
       watcherName
-        ? `🚫 ${en ? "Watcher" : "Wächter"}: ${watcherName}`
-        : en
-          ? "No watcher this turn"
-          : "Kein Wächter in diesem Zug"
+        ? `🚫 ${text("监督员：", "Watcher: ", "Wächter: ")}${watcherName}`
+        : text("本回合没有监督员", "No watcher this turn", "Kein Wächter in diesem Zug")
     );
     this.watcherLine.setColor(watcherName ? hostTheme.css.danger : hostTheme.dim);
 
     this.cardHint.setText(
-      en
-        ? "The term stays on the explainer's and watcher's phone."
-        : "Der Begriff bleibt auf dem Handy von Erklärer und Wächter."
+      text(
+        "目标词只显示在讲解员和监督员的手机上。",
+        "The term stays on the explainer's and watcher's phone.",
+        "Der Begriff bleibt auf dem Handy von Erklärer und Wächter."
+      )
     );
 
     const solvedThisTurn = state?.turnSolved ?? 0;
     const turnLabel =
       state && state.totalTurns > 0
-        ? `${en ? "Turn" : "Zug"} ${Math.min(state.turnIndex + 1, state.totalTurns)}/${state.totalTurns}`
-        : `${model.playerCount} ${en ? "players" : "Spieler"}`;
+        ? `${text("回合", "Turn", "Zug")} ${Math.min(state.turnIndex + 1, state.totalTurns)}/${state.totalTurns}`
+        : text(`${model.playerCount} 名玩家`, `${model.playerCount} players`, `${model.playerCount} Spieler`);
 
     this.turnCounter.setText(
-      `${turnLabel}   ·   ${en ? "this turn" : "dieser Zug"}: ${solvedThisTurn}   ·   ${en ? "total" : "gesamt"}: ${state?.solvedTerms ?? 0}`
+      `${turnLabel}   ·   ${text("本回合：", "this turn: ", "dieser Zug: ")}${solvedThisTurn}   ·   ${text("总计：", "total: ", "gesamt: ")}${state?.solvedTerms ?? 0}`
     );
   }
 
   private updateSide(
     state: BuzzwortControllerState | undefined,
     model: BuzzwortStageModel,
-    en: boolean
+    language: ResolvedBuzzwortLanguage
   ): void {
+    const text = <T>(zhCn: T, en: T, de: T) => localizeBuzzwort(language, zhCn, en, de);
     const teamMode = state?.mode === "team";
 
-    this.scoreTitle.setText(teamMode ? (en ? "TEAMS" : "TEAMS") : en ? "LEADERBOARD" : "RANGLISTE");
-    this.feedTitle.setText(en ? "LIVE" : "LIVE");
+    this.scoreTitle.setText(teamMode ? text("队伍", "TEAMS", "TEAMS") : text("排行榜", "LEADERBOARD", "RANGLISTE"));
+    this.feedTitle.setText(text("实时动态", "LIVE", "LIVE"));
 
     for (const panel of this.teamPanels) {
       const visible = teamMode;
@@ -542,11 +541,15 @@ export class BuzzwortStage {
         .map((playerId) => model.playerNames.get(playerId))
         .filter((name): name is string => Boolean(name));
 
-      panel.title.setText(`${panel.teamId === "team1" ? "Team 1" : "Team 2"}${isActive ? "  ▶" : ""}`);
+      panel.title.setText(
+        `${panel.teamId === "team1" ? text("一队", "Team 1", "Team 1") : text("二队", "Team 2", "Team 2")}${isActive ? "  ▶" : ""}`
+      );
       panel.title.setColor(isActive ? hostTheme.text : hostTheme.muted);
       panel.score.setText(`${state?.scoreByTeamId?.[panel.teamId] ?? 0}`);
       panel.score.setColor(panel.teamId === "team1" ? hostTheme.css.team1 : hostTheme.css.team2);
-      panel.members.setText(memberNames.length > 0 ? memberNames.join(" · ") : en ? "no players" : "keine Spieler");
+      panel.members.setText(
+        memberNames.length > 0 ? memberNames.join(" · ") : text("暂无玩家", "no players", "keine Spieler")
+      );
       panel.background.setAlpha(isActive ? 1 : 0.55);
     }
 
@@ -587,7 +590,7 @@ export class BuzzwortStage {
       }
 
       row.setVisible(true);
-      row.setText(this.formatEvent(event, en));
+      row.setText(this.formatEvent(event, language));
       row.setColor(
         event.kind === "solved"
           ? hostTheme.css.positive
@@ -601,30 +604,46 @@ export class BuzzwortStage {
     });
   }
 
-  private formatEvent(event: BuzzwortEvent, en: boolean): string {
+  private formatEvent(event: BuzzwortEvent, language: ResolvedBuzzwortLanguage): string {
+    const text = <T>(zhCn: T, en: T, de: T) => localizeBuzzwort(language, zhCn, en, de);
+
     switch (event.kind) {
       case "solved":
-        return `✅ „${event.term}"  ${event.actorName ?? ""}`;
+        return text(
+          `✅ “${event.term}”  ${event.actorName ?? ""}`,
+          `✅ „${event.term}"  ${event.actorName ?? ""}`,
+          `✅ „${event.term}"  ${event.actorName ?? ""}`
+        );
       case "buzz":
-        return `🚫 ${"BUZZ"}  ${event.actorName ?? ""}`;
+        return `${text("违规", "BUZZ", "BUZZ")}  ${event.actorName ?? ""}`;
       case "skipped":
-        return `⏭ ${en ? "skipped" : "übersprungen"}`;
+        return `⏭ ${text("已跳过", "skipped", "übersprungen")}`;
       case "turn_start":
-        return `▶ ${event.actorName ?? ""}${event.targetName ? ` vs ${event.targetName}` : ""}`;
+        return text(
+          `▶ ${event.actorName ?? ""}${event.targetName ? ` · ${event.targetName} 监督` : ""}`,
+          `▶ ${event.actorName ?? ""}${event.targetName ? ` vs ${event.targetName}` : ""}`,
+          `▶ ${event.actorName ?? ""}${event.targetName ? ` vs ${event.targetName}` : ""}`
+        );
       case "turn_end":
-        return `🏁 ${event.actorName ?? ""}: ${event.points ?? 0}`;
+        return `🏁 ${event.actorName ?? ""}${text("：", ": ", ": ")}${event.points ?? 0}`;
       default:
         return "";
     }
   }
 
-  private updateMessage(model: BuzzwortStageModel, en: boolean): void {
+  private updateMessage(model: BuzzwortStageModel, language: ResolvedBuzzwortLanguage): void {
     const text = model.message ?? model.state?.lastTurnSummary;
 
-    this.messageText.setText(text ?? (en ? "Waiting for the next turn." : "Warte auf den nächsten Zug."));
+    this.messageText.setText(
+      text ?? localizeBuzzwort(language, "等待下一回合。", "Waiting for the next turn.", "Warte auf den nächsten Zug.")
+    );
   }
 
-  private detectEvents(state: BuzzwortControllerState | undefined, now: number): void {
+  private detectEvents(
+    state: BuzzwortControllerState | undefined,
+    now: number,
+    language: ResolvedBuzzwortLanguage
+  ): void {
     const newest = state?.events?.[0];
 
     if (!newest || newest.id === this.lastEventId) {
@@ -648,7 +667,7 @@ export class BuzzwortStage {
     if (newest.kind === "buzz") {
       this.flashColor = hostTheme.danger;
       this.flashUntil = now + 900;
-      this.spawnPop("BUZZ!", "#f87171");
+      this.spawnPop(localizeBuzzwort(language, "违规！", "BUZZ!", "BUZZ!"), "#f87171");
       return;
     }
 

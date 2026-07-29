@@ -1,4 +1,6 @@
+// Modified for LAN Party Hub; see CHANGES.md and NOTICE.md.
 import type { BuzzwortMode, BuzzwortRole, BuzzwortTeamId } from "../protocol.js";
+import { resolveBuzzwortLanguage } from "../language.js";
 
 export interface BuzzwortTexts {
   modeDuel: string;
@@ -79,8 +81,43 @@ const en: BuzzwortTexts = {
   finalDuel: (name, points) => (name ? `${name} leads with ${points} points.` : "Round over.")
 };
 
+const zhCn: BuzzwortTexts = {
+  modeDuel: "自由对战",
+  modeTeam: "团队模式",
+  roleExplainer: "讲解员",
+  roleWatcher: "监督员",
+  roleGuesser: "猜词者",
+  roleBench: "观战者",
+  team1: "一队",
+  team2: "二队",
+  unknownPlayer: "未知玩家",
+  preparing: "正在准备禁词挑战。",
+  getReady: (name) => `${name} 即将开始，请做好准备……`,
+  turnStart: (name, team) => (team ? `${team}：现在由 ${name} 讲解！` : `现在由 ${name} 讲解！`),
+  turnStartWithWatcher: (name, watcher, team) =>
+    team ? `${team}：${name} 负责讲解，${watcher} 负责监督。` : `${name} 负责讲解，${watcher} 负责监督。`,
+  solved: (term, name) => `“${term}”——${name} 猜对了！`,
+  skipped: (term) => `已跳过“${term}”。`,
+  violation: (term, watcher) => `违规！${watcher} 发现说出了禁词，“${term}”作废。`,
+  turnSummary: (name, solved, violations) =>
+    violations > 0
+      ? `${name}：本回合猜对 ${solved} 个词，触发 ${violations} 次禁词。`
+      : `${name}：本回合猜对 ${solved} 个词。`,
+  noCards: "没有可用的中文禁词卡。",
+  finalTeam: (winner, a, b) =>
+    winner ? `${winner}以 ${Math.max(a, b)}:${Math.min(a, b)} 获胜！` : `双方 ${a}:${b} 平局！`,
+  finalDuel: (name, points) => (name ? `${name} 以 ${points} 分获得第一名。` : "本轮结束。")
+};
+
 export function resolveBuzzwortTexts(language: string): BuzzwortTexts {
-  return language === "en" ? en : de;
+  switch (resolveBuzzwortLanguage(language)) {
+    case "zh-CN":
+      return zhCn;
+    case "en":
+      return en;
+    default:
+      return de;
+  }
 }
 
 export function resolveModeLabel(texts: BuzzwortTexts, mode: BuzzwortMode): string {

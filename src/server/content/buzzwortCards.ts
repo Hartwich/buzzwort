@@ -1,3 +1,6 @@
+// Modified for LAN Party Hub; see CHANGES.md and NOTICE.md.
+import { resolveBuzzwortLanguage } from "../../language.js";
+
 export type BuzzwortCategory =
   | "alltag"
   | "essen"
@@ -250,8 +253,147 @@ export const buzzwortCardsEn: readonly BuzzwortCard[] = [
   { id: "en-104", term: "Twins", forbidden: ["two", "same", "siblings", "born", "confuse"], category: "abstrakt", difficulty: 2 }
 ];
 
+export const buzzwortCardsZhCn: readonly BuzzwortCard[] = [
+  { id: "zh-CN-001", term: "牙刷", forbidden: ["刷牙", "牙膏", "早晚", "嘴巴", "清洁"], category: "alltag", difficulty: 1 },
+  { id: "zh-CN-002", term: "雨伞", forbidden: ["下雨", "撑开", "淋湿", "伞柄", "天气"], category: "alltag", difficulty: 1 },
+  { id: "zh-CN-003", term: "闹钟", forbidden: ["起床", "铃声", "时间", "早晨", "迟到"], category: "alltag", difficulty: 1 },
+  { id: "zh-CN-004", term: "拖鞋", forbidden: ["脚", "室内", "鞋子", "家里", "穿"], category: "alltag", difficulty: 1 },
+  { id: "zh-CN-005", term: "纸巾", forbidden: ["擦", "鼻子", "抽取", "白色", "清洁"], category: "alltag", difficulty: 1 },
+  { id: "zh-CN-006", term: "钥匙", forbidden: ["开门", "锁", "口袋", "丢失", "金属"], category: "alltag", difficulty: 2 },
+  { id: "zh-CN-007", term: "保温杯", forbidden: ["热水", "盖子", "喝水", "温度", "随身"], category: "alltag", difficulty: 2 },
+  { id: "zh-CN-008", term: "晾衣架", forbidden: ["衣服", "阳台", "晒干", "夹子", "挂"], category: "alltag", difficulty: 2 },
+  { id: "zh-CN-009", term: "收纳盒", forbidden: ["整理", "物品", "盒子", "柜子", "分类"], category: "alltag", difficulty: 2 },
+  { id: "zh-CN-010", term: "门铃", forbidden: ["按", "门口", "响声", "访客", "开门"], category: "alltag", difficulty: 2 },
+  { id: "zh-CN-011", term: "防滑垫", forbidden: ["地面", "浴室", "橡胶", "摔倒", "摩擦"], category: "alltag", difficulty: 3 },
+  { id: "zh-CN-012", term: "衣物柔顺剂", forbidden: ["洗衣服", "香味", "柔软", "液体", "洗衣机"], category: "alltag", difficulty: 3 },
+
+  { id: "zh-CN-013", term: "饺子", forbidden: ["面皮", "馅", "煮", "蘸醋", "过年"], category: "essen", difficulty: 1 },
+  { id: "zh-CN-014", term: "火锅", forbidden: ["锅底", "涮", "辣", "蘸料", "聚餐"], category: "essen", difficulty: 1 },
+  { id: "zh-CN-015", term: "西瓜", forbidden: ["夏天", "绿色", "红瓤", "籽", "水果"], category: "essen", difficulty: 1 },
+  { id: "zh-CN-016", term: "豆浆", forbidden: ["黄豆", "早餐", "白色", "喝", "豆腐"], category: "essen", difficulty: 1 },
+  { id: "zh-CN-017", term: "面条", forbidden: ["面粉", "筷子", "汤", "煮", "长"], category: "essen", difficulty: 1 },
+  { id: "zh-CN-018", term: "蛋炒饭", forbidden: ["米饭", "鸡蛋", "锅", "剩饭", "翻炒"], category: "essen", difficulty: 2 },
+  { id: "zh-CN-019", term: "冰糖葫芦", forbidden: ["山楂", "竹签", "糖衣", "酸甜", "街头"], category: "essen", difficulty: 2 },
+  { id: "zh-CN-020", term: "粽子", forbidden: ["糯米", "粽叶", "端午", "包", "蒸煮"], category: "essen", difficulty: 2 },
+  { id: "zh-CN-021", term: "麻婆豆腐", forbidden: ["辣", "花椒", "豆制品", "肉末", "川菜"], category: "essen", difficulty: 2 },
+  { id: "zh-CN-022", term: "馒头", forbidden: ["面粉", "发酵", "蒸", "白色", "主食"], category: "essen", difficulty: 2 },
+  { id: "zh-CN-023", term: "松花蛋", forbidden: ["鸭蛋", "黑色", "凉拌", "石灰", "蛋黄"], category: "essen", difficulty: 3 },
+  { id: "zh-CN-024", term: "藕粉", forbidden: ["莲藕", "冲泡", "透明", "糊状", "甜"], category: "essen", difficulty: 3 },
+
+  { id: "zh-CN-025", term: "太阳", forbidden: ["发光", "天空", "白天", "炎热", "恒星"], category: "natur", difficulty: 1 },
+  { id: "zh-CN-026", term: "月亮", forbidden: ["夜晚", "圆", "天空", "阴晴", "卫星"], category: "natur", difficulty: 1 },
+  { id: "zh-CN-027", term: "彩虹", forbidden: ["七色", "下雨", "阳光", "天空", "弧形"], category: "natur", difficulty: 1 },
+  { id: "zh-CN-028", term: "雪花", forbidden: ["冬天", "白色", "飘落", "冰", "六角"], category: "natur", difficulty: 1 },
+  { id: "zh-CN-029", term: "河流", forbidden: ["水", "岸边", "流动", "入海", "桥"], category: "natur", difficulty: 1 },
+  { id: "zh-CN-030", term: "瀑布", forbidden: ["高处", "落下", "水声", "悬崖", "景区"], category: "natur", difficulty: 2 },
+  { id: "zh-CN-031", term: "沙漠", forbidden: ["干旱", "沙子", "骆驼", "绿洲", "炎热"], category: "natur", difficulty: 2 },
+  { id: "zh-CN-032", term: "竹林", forbidden: ["竹子", "绿色", "成片", "山间", "熊猫"], category: "natur", difficulty: 2 },
+  { id: "zh-CN-033", term: "潮汐", forbidden: ["海水", "月球", "上涨", "退去", "海岸"], category: "natur", difficulty: 2 },
+  { id: "zh-CN-034", term: "山谷", forbidden: ["两山", "低处", "回声", "河道", "地形"], category: "natur", difficulty: 2 },
+  { id: "zh-CN-035", term: "海市蜃楼", forbidden: ["幻象", "远处", "沙漠", "折射", "看见"], category: "natur", difficulty: 3 },
+  { id: "zh-CN-036", term: "季风", forbidden: ["季节", "风向", "降雨", "大陆", "海洋"], category: "natur", difficulty: 3 },
+
+  { id: "zh-CN-037", term: "熊猫", forbidden: ["黑白", "竹子", "国宝", "熊", "四川"], category: "tiere", difficulty: 1 },
+  { id: "zh-CN-038", term: "长颈鹿", forbidden: ["脖子", "很高", "斑点", "非洲", "树叶"], category: "tiere", difficulty: 1 },
+  { id: "zh-CN-039", term: "企鹅", forbidden: ["南极", "黑白", "不会飞", "冰雪", "摇摆"], category: "tiere", difficulty: 1 },
+  { id: "zh-CN-040", term: "海豚", forbidden: ["海洋", "聪明", "跳跃", "鳍", "哺乳"], category: "tiere", difficulty: 1 },
+  { id: "zh-CN-041", term: "松鼠", forbidden: ["尾巴", "坚果", "树上", "储藏", "小动物"], category: "tiere", difficulty: 1 },
+  { id: "zh-CN-042", term: "刺猬", forbidden: ["尖刺", "蜷缩", "小动物", "夜间", "背部"], category: "tiere", difficulty: 2 },
+  { id: "zh-CN-043", term: "变色龙", forbidden: ["改变颜色", "蜥蜴", "舌头", "伪装", "树枝"], category: "tiere", difficulty: 2 },
+  { id: "zh-CN-044", term: "啄木鸟", forbidden: ["鸟", "树干", "敲击", "虫子", "鸟嘴"], category: "tiere", difficulty: 2 },
+  { id: "zh-CN-045", term: "萤火虫", forbidden: ["夜晚", "发光", "昆虫", "草丛", "尾部"], category: "tiere", difficulty: 2 },
+  { id: "zh-CN-046", term: "寄居蟹", forbidden: ["贝壳", "螃蟹", "搬家", "海边", "钳子"], category: "tiere", difficulty: 2 },
+  { id: "zh-CN-047", term: "鸭嘴兽", forbidden: ["澳洲", "哺乳", "扁嘴", "下蛋", "水里"], category: "tiere", difficulty: 3 },
+  { id: "zh-CN-048", term: "蝾螈", forbidden: ["两栖", "尾巴", "潮湿", "再生", "小动物"], category: "tiere", difficulty: 3 },
+
+  { id: "zh-CN-049", term: "手机", forbidden: ["屏幕", "打电话", "上网", "电池", "随身"], category: "technik", difficulty: 1 },
+  { id: "zh-CN-050", term: "耳机", forbidden: ["耳朵", "音乐", "声音", "佩戴", "线"], category: "technik", difficulty: 1 },
+  { id: "zh-CN-051", term: "电梯", forbidden: ["楼层", "按钮", "上下", "门", "大楼"], category: "technik", difficulty: 1 },
+  { id: "zh-CN-052", term: "微波炉", forbidden: ["加热", "厨房", "食物", "转盘", "叮"], category: "technik", difficulty: 1 },
+  { id: "zh-CN-053", term: "遥控器", forbidden: ["按键", "电视", "频道", "沙发", "电池"], category: "technik", difficulty: 1 },
+  { id: "zh-CN-054", term: "路由器", forbidden: ["网络", "无线", "信号", "天线", "密码"], category: "technik", difficulty: 2 },
+  { id: "zh-CN-055", term: "二维码", forbidden: ["扫描", "黑白", "方块", "手机", "付款"], category: "technik", difficulty: 2 },
+  { id: "zh-CN-056", term: "太阳能板", forbidden: ["阳光", "发电", "屋顶", "能源", "电池"], category: "technik", difficulty: 2 },
+  { id: "zh-CN-057", term: "智能门锁", forbidden: ["指纹", "密码", "开门", "钥匙", "安全"], category: "technik", difficulty: 2 },
+  { id: "zh-CN-058", term: "无人机", forbidden: ["飞行", "遥控", "螺旋桨", "航拍", "天空"], category: "technik", difficulty: 2 },
+  { id: "zh-CN-059", term: "陀螺仪", forbidden: ["旋转", "方向", "传感器", "平衡", "手机"], category: "technik", difficulty: 3 },
+  { id: "zh-CN-060", term: "热成像仪", forbidden: ["温度", "红外", "画面", "检测", "颜色"], category: "technik", difficulty: 3 },
+
+  { id: "zh-CN-061", term: "篮球", forbidden: ["篮筐", "球场", "投篮", "运球", "五个人"], category: "sport", difficulty: 1 },
+  { id: "zh-CN-062", term: "游泳", forbidden: ["水", "泳池", "换气", "泳衣", "划动"], category: "sport", difficulty: 1 },
+  { id: "zh-CN-063", term: "跑步", forbidden: ["双腿", "速度", "跑道", "运动鞋", "终点"], category: "sport", difficulty: 1 },
+  { id: "zh-CN-064", term: "羽毛球", forbidden: ["球拍", "羽毛", "球网", "挥拍", "场地"], category: "sport", difficulty: 1 },
+  { id: "zh-CN-065", term: "跳绳", forbidden: ["绳子", "跳跃", "手柄", "计数", "双脚"], category: "sport", difficulty: 1 },
+  { id: "zh-CN-066", term: "乒乓球", forbidden: ["小球", "球拍", "球台", "球网", "旋转"], category: "sport", difficulty: 2 },
+  { id: "zh-CN-067", term: "射箭", forbidden: ["弓", "箭", "靶心", "拉弦", "射中"], category: "sport", difficulty: 2 },
+  { id: "zh-CN-068", term: "滑板", forbidden: ["轮子", "木板", "站立", "滑行", "技巧"], category: "sport", difficulty: 2 },
+  { id: "zh-CN-069", term: "接力赛", forbidden: ["队友", "接力棒", "轮流", "跑道", "交接"], category: "sport", difficulty: 2 },
+  { id: "zh-CN-070", term: "攀岩", forbidden: ["岩壁", "绳索", "向上", "抓点", "安全带"], category: "sport", difficulty: 2 },
+  { id: "zh-CN-071", term: "铁人三项", forbidden: ["游泳", "自行车", "跑步", "连续", "耐力"], category: "sport", difficulty: 3 },
+  { id: "zh-CN-072", term: "定向越野", forbidden: ["地图", "指南针", "户外", "检查点", "路线"], category: "sport", difficulty: 3 },
+
+  { id: "zh-CN-073", term: "书法", forbidden: ["毛笔", "汉字", "墨水", "宣纸", "练字"], category: "kultur", difficulty: 1 },
+  { id: "zh-CN-074", term: "剪纸", forbidden: ["窗花", "剪刀", "红纸", "图案", "手工"], category: "kultur", difficulty: 1 },
+  { id: "zh-CN-075", term: "灯谜", forbidden: ["元宵", "猜", "灯笼", "谜底", "节日"], category: "kultur", difficulty: 1 },
+  { id: "zh-CN-076", term: "舞龙", forbidden: ["长条", "节庆", "多人", "龙头", "表演"], category: "kultur", difficulty: 1 },
+  { id: "zh-CN-077", term: "皮影戏", forbidden: ["灯光", "幕布", "人偶", "影子", "传统"], category: "kultur", difficulty: 1 },
+  { id: "zh-CN-078", term: "京剧", forbidden: ["脸谱", "唱腔", "戏曲", "舞台", "服装"], category: "kultur", difficulty: 2 },
+  { id: "zh-CN-079", term: "陶艺", forbidden: ["泥土", "转盘", "烧制", "花瓶", "手工"], category: "kultur", difficulty: 2 },
+  { id: "zh-CN-080", term: "围棋", forbidden: ["黑白", "棋盘", "落子", "十九路", "对弈"], category: "kultur", difficulty: 2 },
+  { id: "zh-CN-081", term: "相声", forbidden: ["两个人", "说学逗唱", "舞台", "包袱", "语言"], category: "kultur", difficulty: 2 },
+  { id: "zh-CN-082", term: "木版年画", forbidden: ["印刷", "春节", "图案", "颜料", "传统"], category: "kultur", difficulty: 2 },
+  { id: "zh-CN-083", term: "篆刻", forbidden: ["印章", "石头", "刻刀", "文字", "朱砂"], category: "kultur", difficulty: 3 },
+  { id: "zh-CN-084", term: "二十四节气", forbidden: ["农历", "季节", "立春", "气候", "传统"], category: "kultur", difficulty: 3 },
+
+  { id: "zh-CN-085", term: "医院", forbidden: ["医生", "病人", "看病", "护士", "病房"], category: "orte", difficulty: 1 },
+  { id: "zh-CN-086", term: "图书馆", forbidden: ["书", "安静", "借阅", "书架", "阅读"], category: "orte", difficulty: 1 },
+  { id: "zh-CN-087", term: "菜市场", forbidden: ["蔬菜", "摊位", "买菜", "价格", "早晨"], category: "orte", difficulty: 1 },
+  { id: "zh-CN-088", term: "火车站", forbidden: ["站台", "列车", "车票", "候车", "出发"], category: "orte", difficulty: 1 },
+  { id: "zh-CN-089", term: "公园", forbidden: ["散步", "草地", "长椅", "树木", "市民"], category: "orte", difficulty: 1 },
+  { id: "zh-CN-090", term: "博物馆", forbidden: ["展品", "历史", "参观", "文物", "讲解"], category: "orte", difficulty: 2 },
+  { id: "zh-CN-091", term: "地下通道", forbidden: ["地面下", "行人", "台阶", "穿过", "马路"], category: "orte", difficulty: 2 },
+  { id: "zh-CN-092", term: "露营地", forbidden: ["帐篷", "户外", "过夜", "营火", "草地"], category: "orte", difficulty: 2 },
+  { id: "zh-CN-093", term: "天文台", forbidden: ["望远镜", "星星", "观测", "夜空", "科学家"], category: "orte", difficulty: 2 },
+  { id: "zh-CN-094", term: "水族馆", forbidden: ["鱼", "玻璃", "海洋", "水箱", "参观"], category: "orte", difficulty: 2 },
+  { id: "zh-CN-095", term: "污水处理厂", forbidden: ["废水", "过滤", "净化", "管道", "排放"], category: "orte", difficulty: 3 },
+  { id: "zh-CN-096", term: "货运码头", forbidden: ["集装箱", "轮船", "装卸", "港口", "运输"], category: "orte", difficulty: 3 },
+
+  { id: "zh-CN-097", term: "医生", forbidden: ["看病", "医院", "听诊器", "患者", "处方"], category: "beruf", difficulty: 1 },
+  { id: "zh-CN-098", term: "老师", forbidden: ["学生", "学校", "上课", "作业", "讲台"], category: "beruf", difficulty: 1 },
+  { id: "zh-CN-099", term: "厨师", forbidden: ["做饭", "厨房", "菜刀", "餐厅", "味道"], category: "beruf", difficulty: 1 },
+  { id: "zh-CN-100", term: "消防员", forbidden: ["灭火", "水枪", "火灾", "救援", "制服"], category: "beruf", difficulty: 1 },
+  { id: "zh-CN-101", term: "快递员", forbidden: ["包裹", "送货", "电话", "签收", "骑车"], category: "beruf", difficulty: 1 },
+  { id: "zh-CN-102", term: "摄影师", forbidden: ["相机", "拍照", "镜头", "构图", "照片"], category: "beruf", difficulty: 2 },
+  { id: "zh-CN-103", term: "翻译员", forbidden: ["语言", "外语", "转换", "口译", "文字"], category: "beruf", difficulty: 2 },
+  { id: "zh-CN-104", term: "园艺师", forbidden: ["花草", "修剪", "花园", "种植", "植物"], category: "beruf", difficulty: 2 },
+  { id: "zh-CN-105", term: "气象员", forbidden: ["天气", "预报", "气温", "卫星", "降雨"], category: "beruf", difficulty: 2 },
+  { id: "zh-CN-106", term: "配音员", forbidden: ["声音", "角色", "录音棚", "台词", "麦克风"], category: "beruf", difficulty: 2 },
+  { id: "zh-CN-107", term: "文物修复师", forbidden: ["古代", "损坏", "还原", "博物馆", "手艺"], category: "beruf", difficulty: 3 },
+  { id: "zh-CN-108", term: "精算师", forbidden: ["风险", "保险", "数学", "概率", "计算"], category: "beruf", difficulty: 3 },
+
+  { id: "zh-CN-109", term: "时间", forbidden: ["钟表", "过去", "未来", "分钟", "等待"], category: "abstrakt", difficulty: 1 },
+  { id: "zh-CN-110", term: "勇气", forbidden: ["害怕", "面对", "胆量", "冒险", "坚持"], category: "abstrakt", difficulty: 1 },
+  { id: "zh-CN-111", term: "秘密", forbidden: ["不告诉", "隐藏", "知道", "保守", "悄悄"], category: "abstrakt", difficulty: 1 },
+  { id: "zh-CN-112", term: "运气", forbidden: ["幸运", "随机", "好坏", "抽奖", "偶然"], category: "abstrakt", difficulty: 1 },
+  { id: "zh-CN-113", term: "规则", forbidden: ["遵守", "游戏", "规定", "违反", "公平"], category: "abstrakt", difficulty: 1 },
+  { id: "zh-CN-114", term: "记忆", forbidden: ["过去", "想起", "大脑", "忘记", "印象"], category: "abstrakt", difficulty: 2 },
+  { id: "zh-CN-115", term: "误会", forbidden: ["理解错误", "解释", "沟通", "生气", "澄清"], category: "abstrakt", difficulty: 2 },
+  { id: "zh-CN-116", term: "耐心", forbidden: ["等待", "着急", "坚持", "慢慢", "脾气"], category: "abstrakt", difficulty: 2 },
+  { id: "zh-CN-117", term: "默契", forbidden: ["配合", "不用说", "懂得", "伙伴", "同步"], category: "abstrakt", difficulty: 2 },
+  { id: "zh-CN-118", term: "灵感", forbidden: ["突然想到", "创作", "主意", "脑海", "启发"], category: "abstrakt", difficulty: 2 },
+  { id: "zh-CN-119", term: "既视感", forbidden: ["好像见过", "熟悉", "重复", "感觉", "场景"], category: "abstrakt", difficulty: 3 },
+  { id: "zh-CN-120", term: "机会成本", forbidden: ["选择", "放弃", "代价", "经济", "比较"], category: "abstrakt", difficulty: 3 }
+];
+
 export function resolveBuzzwortDeck(language: string): readonly BuzzwortCard[] {
-  return language === "en" ? buzzwortCardsEn : buzzwortCardsDe;
+  switch (resolveBuzzwortLanguage(language)) {
+    case "zh-CN":
+      return buzzwortCardsZhCn;
+    case "en":
+      return buzzwortCardsEn;
+    default:
+      return buzzwortCardsDe;
+  }
 }
 
 /** Rueckwaertskompatibler Export fuer bestehende Importe. */

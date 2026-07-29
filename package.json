@@ -37,11 +37,14 @@
     "dist",
     "README.md",
     "AGENTS.md",
+    "CHANGES.md",
+    "NOTICE.md",
     "docs"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
     "dev": "npm run typecheck",
     "pack:dry-run": "npm pack --dry-run"
   },

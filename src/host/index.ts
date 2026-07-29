@@ -1,5 +1,7 @@
+// Modified for LAN Party Hub; see CHANGES.md and NOTICE.md.
 import Phaser from "phaser";
 import { buzzwortManifest } from "../manifest.js";
+import type { BuzzwortLanguage } from "../language.js";
 import type { BuzzwortControllerState, BuzzwortMode } from "../protocol.js";
 import { hostTheme } from "./theme.js";
 import { BuzzwortHud } from "./BuzzwortHud.js";
@@ -18,7 +20,7 @@ interface HostAppStateLike {
   } | null;
   room?: {
     code?: string;
-    language?: "de" | "en";
+    language?: BuzzwortLanguage;
     players?: Array<{ id: string; name: string }>;
     settings?: Record<string, unknown>;
   } | null;
