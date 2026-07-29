@@ -489,7 +489,7 @@ export class BuzzwortStage {
 
     this.watcherLine.setText(
       watcherName
-        ? `🚫 ${text("监督员：", "Watcher: ", "Wächter: ")}${watcherName}`
+        ? `${text("监督员：", "Watcher: ", "Wächter: ")}${watcherName}`
         : text("本回合没有监督员", "No watcher this turn", "Kein Wächter in diesem Zug")
     );
     this.watcherLine.setColor(watcherName ? hostTheme.css.danger : hostTheme.dim);
@@ -542,7 +542,9 @@ export class BuzzwortStage {
         .filter((name): name is string => Boolean(name));
 
       panel.title.setText(
-        `${panel.teamId === "team1" ? text("一队", "Team 1", "Team 1") : text("二队", "Team 2", "Team 2")}${isActive ? "  ▶" : ""}`
+        `${panel.teamId === "team1" ? text("一队", "Team 1", "Team 1") : text("二队", "Team 2", "Team 2")}${
+          isActive ? text("（当前）", " (active)", " (aktiv)") : ""
+        }`
       );
       panel.title.setColor(isActive ? hostTheme.text : hostTheme.muted);
       panel.score.setText(`${state?.scoreByTeamId?.[panel.teamId] ?? 0}`);
@@ -610,22 +612,22 @@ export class BuzzwortStage {
     switch (event.kind) {
       case "solved":
         return text(
-          `✅ “${event.term}”  ${event.actorName ?? ""}`,
-          `✅ „${event.term}"  ${event.actorName ?? ""}`,
-          `✅ „${event.term}"  ${event.actorName ?? ""}`
+          `猜对：“${event.term}”  ${event.actorName ?? ""}`,
+          `Solved: „${event.term}"  ${event.actorName ?? ""}`,
+          `Gelöst: „${event.term}"  ${event.actorName ?? ""}`
         );
       case "buzz":
         return `${text("违规", "BUZZ", "BUZZ")}  ${event.actorName ?? ""}`;
       case "skipped":
-        return `⏭ ${text("已跳过", "skipped", "übersprungen")}`;
+        return text("已跳过", "Skipped", "Übersprungen");
       case "turn_start":
         return text(
-          `▶ ${event.actorName ?? ""}${event.targetName ? ` · ${event.targetName} 监督` : ""}`,
-          `▶ ${event.actorName ?? ""}${event.targetName ? ` vs ${event.targetName}` : ""}`,
-          `▶ ${event.actorName ?? ""}${event.targetName ? ` vs ${event.targetName}` : ""}`
+          `${event.actorName ?? ""}${event.targetName ? ` · ${event.targetName} 监督` : ""}`,
+          `${event.actorName ?? ""}${event.targetName ? ` vs ${event.targetName}` : ""}`,
+          `${event.actorName ?? ""}${event.targetName ? ` vs ${event.targetName}` : ""}`
         );
       case "turn_end":
-        return `🏁 ${event.actorName ?? ""}${text("：", ": ", ": ")}${event.points ?? 0}`;
+        return `${event.actorName ?? ""}${text("：", ": ", ": ")}${event.points ?? 0}`;
       default:
         return "";
     }

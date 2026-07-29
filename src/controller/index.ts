@@ -130,36 +130,36 @@ function formatEvent(
     case "solved":
       return {
         text: text(
-          `✅ “${event.term}”——${event.actorName ?? ""}`,
-          `✅ „${event.term}" — ${event.actorName ?? ""}`,
-          `✅ „${event.term}" — ${event.actorName ?? ""}`
+          `猜对：“${event.term}”——${event.actorName ?? ""}`,
+          `Solved: „${event.term}" — ${event.actorName ?? ""}`,
+          `Gelöst: „${event.term}" — ${event.actorName ?? ""}`
         ),
         tone: "positive"
       };
     case "buzz":
       return {
         text: text(
-          `🚫 违规：“${event.term}”（${event.actorName ?? ""}）`,
-          `🚫 BUZZ: „${event.term}" (${event.actorName ?? ""})`,
-          `🚫 BUZZ: „${event.term}" (${event.actorName ?? ""})`
+          `违规：“${event.term}”（${event.actorName ?? ""}）`,
+          `BUZZ: „${event.term}" (${event.actorName ?? ""})`,
+          `BUZZ: „${event.term}" (${event.actorName ?? ""})`
         ),
         tone: "danger"
       };
     case "skipped":
       return {
         text: text(
-          `⏭ 已跳过“${event.term}”`,
-          `⏭ „${event.term}" skipped`,
-          `⏭ „${event.term}" übersprungen`
+          `已跳过“${event.term}”`,
+          `„${event.term}" skipped`,
+          `„${event.term}" übersprungen`
         ),
         tone: "neutral"
       };
     case "turn_end":
       return {
         text: text(
-          `🏁 ${event.actorName ?? ""}：猜对 ${event.points ?? 0} 个词`,
-          `🏁 ${event.actorName ?? ""}: ${event.points ?? 0} terms`,
-          `🏁 ${event.actorName ?? ""}: ${event.points ?? 0} Begriffe`
+          `${event.actorName ?? ""}：猜对 ${event.points ?? 0} 个词`,
+          `${event.actorName ?? ""}: ${event.points ?? 0} terms`,
+          `${event.actorName ?? ""}: ${event.points ?? 0} Begriffe`
         ),
         tone: "neutral"
       };
@@ -269,7 +269,7 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
     if (buzzwort.mode === "team") {
       actions.push({
         id: "buzzwort:solved",
-        label: text("✅ 猜对了！", "✅ Correct!", "✅ Richtig!"),
+        label: text("猜对了！", "Correct!", "Richtig!"),
         sublabel: text("你的队伍猜中了", "Your team guessed it", "Euer Team hat es"),
         tone: "positive",
         disabled: !isActive,
@@ -288,7 +288,7 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
 
     actions.push({
       id: "buzzwort:skip",
-      label: text("⏭ 跳过", "⏭ Skip", "⏭ Überspringen"),
+      label: text("跳过", "Skip", "Überspringen"),
       sublabel: text(
         `本回合还可跳过 ${buzzwort.skipsLeft ?? 0} 次`,
         `${buzzwort.skipsLeft ?? 0} left this turn`,
@@ -303,7 +303,7 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
   if (buzzwort.isWatcher) {
     actions.push({
       id: "buzzwort:violation",
-      label: text("🚫 违规！", "🚫 BUZZ!", "🚫 BUZZ!"),
+      label: text("违规！", "BUZZ!", "BUZZ!"),
       sublabel: text("讲解员说出了禁词", "Forbidden word used", "Verbotenes Wort benutzt"),
       tone: "danger",
       disabled: !isActive,
