@@ -4,6 +4,8 @@ import type { BuzzwortControllerState, BuzzwortMode } from "../protocol.js";
 import { hostTheme } from "./theme.js";
 import { BuzzwortHud } from "./BuzzwortHud.js";
 import { BuzzwortStage } from "./BuzzwortStage.js";
+import { renderRoundScreens } from "./roundScreens.js";
+import { bindPlatformTheme } from "./platformTheme.js";
 
 interface HostClientLike {
   subscribe(callback: (state: HostAppStateLike) => void): () => void;
@@ -43,6 +45,7 @@ export class BuzzwortHostScene extends Phaser.Scene {
   }
 
   create(): void {
+    bindPlatformTheme(this.registry);
     const client = this.registry.get("hostClient") as HostClientLike;
 
     this.cameras.main.setBackgroundColor(hostTheme.panel);
@@ -68,6 +71,11 @@ export class BuzzwortHostScene extends Phaser.Scene {
     this.stage = new BuzzwortStage(this);
 
     this.unsubscribe = client.subscribe((state) => {
+      // Intro and result screens belong to this game, not the platform.
+      if (renderRoundScreens(this, state)) {
+        return;
+      }
+
       this.latest = state;
       this.playerNames = new Map((state.room?.players ?? []).map((player) => [player.id, player.name]));
 

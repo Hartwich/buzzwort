@@ -1,7 +1,14 @@
+import { tokenColor, tokens } from "./platformTheme.js";
 export const hostTheme = {
-  panel: "#070d1c",
-  backgroundTop: 0x0b1226,
-  backgroundBottom: 0x050912,
+  get panel() {
+    return tokens().color.surface;
+  },
+  get backgroundTop() {
+    return tokenColor((theme) => theme.color.background);
+  },
+  get backgroundBottom() {
+    return tokenColor((theme) => theme.color.backgroundDeep);
+  },
 
   surface: 0x101c34,
   surfaceSoft: 0x16233d,
@@ -21,9 +28,9 @@ export const hostTheme = {
   bodyFont: '"Nunito Sans", sans-serif',
   monoFont: '"JetBrains Mono", Consolas, monospace',
 
-  text: "#f8fafc",
-  muted: "#94a3b8",
-  dim: "#64748b",
+  text: tokens().color.text,
+  muted: tokens().color.muted,
+  dim: tokens().color.muted,
 
   css: {
     accent: "#60a5fa",

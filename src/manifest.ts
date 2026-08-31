@@ -11,7 +11,11 @@ export const buzzwortManifest = {
   controllerLayout: "secret_card",
   supportsTeams: true,
   estimatedRoundDurationMs: 420_000,
-  roundCompletionMode: "wait_for_ready"
+  roundCompletionMode: "wait_for_ready",
+
+  ownsScreens: ["round_intro", "result"],
+  visual: { accent: "#5b7f9c", eyebrow: "Words" },
+  audio: { track: { profile: "arcade", bpm: 124, rootMidi: 57, masterGain: 0.13 } },
 } as const satisfies GameManifest;
 
 export const manifest = buzzwortManifest;
