@@ -14,7 +14,7 @@ export const buzzwortManifest = {
   roundCompletionMode: "wait_for_ready",
 
   ownsScreens: ["round_intro", "result"],
-  visual: { accent: "#5b7f9c", eyebrow: "Words" },
+  visual: { accent: "#5b7f9c", icon: "chat", eyebrow: "Words" },
   audio: { track: { profile: "arcade", bpm: 124, rootMidi: 57, masterGain: 0.13 } },
 } as const satisfies GameManifest;
 
