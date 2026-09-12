@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import type { SupportedLanguage } from "@open-party-lab/game-core";
 import type { BuzzwortControllerState, BuzzwortEvent, BuzzwortTeamId } from "../protocol.js";
-import { hostTheme } from "./theme.js";
+import { font, ink, paint, teamInk, teamPaint } from "./theme.js";
 import { BUZZWORT_HUD_HEIGHT } from "./BuzzwortHud.js";
 
 export interface BuzzwortStageModel {
@@ -42,6 +42,10 @@ function easeRatio(remainingMs: number | null, durationMs: number): number {
 /**
  * Hauptbuehne des Host-Screens. Alle Objekte werden einmal angelegt und danach
  * nur aktualisiert, damit Timer und Effekte fluessig laufen.
+ *
+ * Farben und Schriften kommen bei jedem Zeichnen frisch aus den
+ * Platform-Tokens. Bei einem Theme-Wechsel startet die Plattform die Szene neu,
+ * sodass auch die im Konstruktor gesetzten Textfarben aktualisiert werden.
  */
 export class BuzzwortStage {
   private readonly scene: Phaser.Scene;
@@ -72,7 +76,7 @@ export class BuzzwortStage {
   private ringY = 0;
   private lastEventId?: string;
   private flashUntil = 0;
-  private flashColor: number = hostTheme.positive;
+  private flashColor: number = 0x000000;
   private lastRingColor = "";
   private nextSlowUpdateAt = 0;
 
@@ -86,111 +90,65 @@ export class BuzzwortStage {
     this.ringProgress = scene.add.graphics().setDepth(5);
 
     this.ringValue = scene.add
-      .text(0, 0, "--", {
-        fontFamily: hostTheme.titleFont,
-        fontSize: "76px",
-        color: hostTheme.text
-      })
+      .text(0, 0, "--", { fontFamily: font.title, fontSize: "76px", color: ink.text })
       .setOrigin(0.5)
       .setDepth(6);
     this.ringCaption = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.bodyFont,
-        fontSize: "15px",
-        color: hostTheme.dim
-      })
+      .text(0, 0, "", { fontFamily: font.body, fontSize: "15px", color: ink.muted })
       .setOrigin(0.5)
       .setDepth(6);
 
     this.phaseBadge = scene.add.graphics().setDepth(5);
     this.phaseLabel = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.bodyFont,
-        fontSize: "15px",
-        color: hostTheme.text
-      })
+      .text(0, 0, "", { fontFamily: font.body, fontSize: "15px", color: ink.text })
       .setOrigin(0.5)
       .setDepth(6);
 
     this.explainerLabel = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.bodyFont,
-        fontSize: "14px",
-        color: hostTheme.dim
-      })
+      .text(0, 0, "", { fontFamily: font.body, fontSize: "14px", color: ink.muted })
       .setOrigin(0.5)
       .setDepth(6);
     this.explainerName = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.titleFont,
-        fontSize: "40px",
-        color: hostTheme.text
-      })
+      .text(0, 0, "", { fontFamily: font.title, fontSize: "40px", color: ink.text })
       .setOrigin(0.5)
       .setDepth(6);
     this.watcherLine = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.bodyFont,
-        fontSize: "17px",
-        color: hostTheme.muted
-      })
+      .text(0, 0, "", { fontFamily: font.body, fontSize: "17px", color: ink.soft })
       .setOrigin(0.5)
       .setDepth(6);
 
     this.cardBack = scene.add.graphics().setDepth(4);
     this.cardHint = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.bodyFont,
-        fontSize: "16px",
-        color: hostTheme.muted,
-        align: "center"
-      })
+      .text(0, 0, "", { fontFamily: font.body, fontSize: "16px", color: ink.soft, align: "center" })
       .setOrigin(0.5)
       .setDepth(6);
     this.turnCounter = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.monoFont,
-        fontSize: "16px",
-        color: hostTheme.dim
-      })
+      .text(0, 0, "", { fontFamily: font.mono, fontSize: "16px", color: ink.muted })
       .setOrigin(0.5)
       .setDepth(6);
 
     this.messageBanner = scene.add.graphics().setDepth(4);
     this.messageText = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.bodyFont,
-        fontSize: "20px",
-        color: hostTheme.text,
-        align: "center"
-      })
+      .text(0, 0, "", { fontFamily: font.body, fontSize: "20px", color: ink.text, align: "center" })
       .setOrigin(0.5)
       .setDepth(6);
 
     this.scoreTitle = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.bodyFont,
-        fontSize: "13px",
-        color: hostTheme.dim
-      })
+      .text(0, 0, "", { fontFamily: font.body, fontSize: "13px", color: ink.muted })
       .setDepth(6);
     this.feedTitle = scene.add
-      .text(0, 0, "", {
-        fontFamily: hostTheme.bodyFont,
-        fontSize: "13px",
-        color: hostTheme.dim
-      })
+      .text(0, 0, "", { fontFamily: font.body, fontSize: "13px", color: ink.muted })
       .setDepth(6);
 
     for (let index = 0; index < MAX_SCORE_ROWS; index += 1) {
       this.scoreRows.push({
         background: scene.add.graphics().setDepth(4),
         name: scene.add
-          .text(0, 0, "", { fontFamily: hostTheme.bodyFont, fontSize: "18px", color: hostTheme.text })
+          .text(0, 0, "", { fontFamily: font.body, fontSize: "18px", color: ink.text })
           .setOrigin(0, 0.5)
           .setDepth(6),
         value: scene.add
-          .text(0, 0, "", { fontFamily: hostTheme.titleFont, fontSize: "22px", color: hostTheme.css.accent })
+          .text(0, 0, "", { fontFamily: font.title, fontSize: "22px", color: ink.accent })
           .setOrigin(1, 0.5)
           .setDepth(6)
       });
@@ -201,17 +159,17 @@ export class BuzzwortStage {
         teamId,
         background: scene.add.graphics().setDepth(4),
         title: scene.add
-          .text(0, 0, "", { fontFamily: hostTheme.bodyFont, fontSize: "16px", color: hostTheme.muted })
+          .text(0, 0, "", { fontFamily: font.body, fontSize: "16px", color: ink.soft })
           .setDepth(6),
         score: scene.add
-          .text(0, 0, "", { fontFamily: hostTheme.titleFont, fontSize: "56px", color: hostTheme.text })
+          .text(0, 0, "", { fontFamily: font.title, fontSize: "56px", color: teamInk(teamId) })
           .setOrigin(1, 0)
           .setDepth(6),
         members: scene.add
           .text(0, 0, "", {
-            fontFamily: hostTheme.bodyFont,
+            fontFamily: font.body,
             fontSize: "14px",
-            color: hostTheme.dim,
+            color: ink.muted,
             wordWrap: { width: 240 }
           })
           .setDepth(6)
@@ -222,9 +180,9 @@ export class BuzzwortStage {
       this.feedRows.push(
         scene.add
           .text(0, 0, "", {
-            fontFamily: hostTheme.bodyFont,
+            fontFamily: font.body,
             fontSize: "16px",
-            color: hostTheme.muted,
+            color: ink.soft,
             wordWrap: { width: 280 }
           })
           .setDepth(6)
@@ -232,11 +190,12 @@ export class BuzzwortStage {
     }
 
     this.popText = scene.add
-      .text(0, 0, "", { fontFamily: hostTheme.titleFont, fontSize: "44px", color: "#4ade80" })
+      .text(0, 0, "", { fontFamily: font.title, fontSize: "44px", color: ink.positive })
       .setOrigin(0.5)
       .setAlpha(0)
       .setDepth(10);
 
+    this.flashColor = paint.positive;
     this.layout();
   }
 
@@ -251,14 +210,14 @@ export class BuzzwortStage {
 
     this.background.clear();
     this.background.fillGradientStyle(
-      hostTheme.backgroundTop,
-      hostTheme.backgroundTop,
-      hostTheme.backgroundBottom,
-      hostTheme.backgroundBottom,
+      paint.background,
+      paint.background,
+      paint.backgroundDeep,
+      paint.backgroundDeep,
       1
     );
     this.background.fillRect(0, 0, width, height);
-    this.background.fillStyle(hostTheme.accent, 0.05);
+    this.background.fillStyle(paint.accent, 0.05);
     this.background.fillCircle(this.centerX, this.ringY, RING_RADIUS + 90);
 
     this.ringValue.setPosition(this.centerX, this.ringY - 8);
@@ -278,11 +237,11 @@ export class BuzzwortStage {
     const cardY = this.ringY + RING_RADIUS + 122;
 
     this.cardBack.clear();
-    this.cardBack.fillStyle(hostTheme.surface, 0.85);
+    this.cardBack.fillStyle(paint.surfaceRaised, 0.9);
     this.cardBack.fillRoundedRect(cardX, cardY, cardWidth, cardHeight, 14);
-    this.cardBack.lineStyle(1.5, hostTheme.outline, 0.9);
+    this.cardBack.lineStyle(1.5, paint.lineStrong, 0.9);
     this.cardBack.strokeRoundedRect(cardX, cardY, cardWidth, cardHeight, 14);
-    this.cardBack.lineStyle(1, hostTheme.outlineSoft, 0.5);
+    this.cardBack.lineStyle(1, paint.line, 0.6);
 
     for (let offset = -cardHeight; offset < cardWidth; offset += 18) {
       this.cardBack.lineBetween(cardX + offset, cardY + cardHeight, cardX + offset + cardHeight, cardY);
@@ -298,19 +257,19 @@ export class BuzzwortStage {
     const bannerY = height - bannerHeight - 28;
 
     this.messageBanner.clear();
-    this.messageBanner.fillStyle(hostTheme.surfaceSoft, 0.85);
+    this.messageBanner.fillStyle(paint.surface, 0.88);
     this.messageBanner.fillRoundedRect(bannerX, bannerY, bannerWidth, bannerHeight, 12);
-    this.messageBanner.lineStyle(1, hostTheme.outline, 0.8);
+    this.messageBanner.lineStyle(1, paint.line, 0.9);
     this.messageBanner.strokeRoundedRect(bannerX, bannerY, bannerWidth, bannerHeight, 12);
 
     this.messageText.setPosition(this.centerX, bannerY + bannerHeight / 2);
     this.messageText.setWordWrapWidth(bannerWidth - 48);
 
-    this.layoutSide(sideWidth, top, height);
+    this.layoutSide(sideWidth, top);
     this.popText.setPosition(this.centerX + RING_RADIUS + 40, this.ringY);
   }
 
-  private layoutSide(sideWidth: number, top: number, height: number): void {
+  private layoutSide(sideWidth: number, top: number): void {
     const width = this.scene.scale.width;
     const leftX = 40;
     const rightX = width - sideWidth - 40;
@@ -322,9 +281,9 @@ export class BuzzwortStage {
       const panelY = top + 52 + index * 148;
 
       panel.background.clear();
-      panel.background.fillStyle(hostTheme.surface, 0.8);
+      panel.background.fillStyle(paint.surface, 0.85);
       panel.background.fillRoundedRect(leftX, panelY, sideWidth, 132, 14);
-      panel.background.lineStyle(2, panel.teamId === "team1" ? hostTheme.team1 : hostTheme.team2, 0.55);
+      panel.background.lineStyle(2, teamPaint(panel.teamId), 0.6);
       panel.background.strokeRoundedRect(leftX, panelY, sideWidth, 132, 14);
 
       panel.title.setPosition(leftX + 18, panelY + 16);
@@ -337,7 +296,7 @@ export class BuzzwortStage {
       const rowY = top + 52 + index * 46;
 
       row.background.clear();
-      row.background.fillStyle(hostTheme.surface, 0.72);
+      row.background.fillStyle(paint.surface, 0.78);
       row.background.fillRoundedRect(leftX, rowY, sideWidth, 38, 10);
 
       row.name.setPosition(leftX + 14, rowY + 19);
@@ -348,8 +307,6 @@ export class BuzzwortStage {
       row.setPosition(rightX, top + 52 + index * 46);
       row.setWordWrapWidth(sideWidth);
     });
-
-    void height;
   }
 
   update(model: BuzzwortStageModel, now: number): void {
@@ -383,10 +340,23 @@ export class BuzzwortStage {
     const ratio = active || preview ? easeRatio(remaining, duration) : 0;
     const seconds = remaining === null ? null : Math.ceil(remaining / 1000);
     const urgent = active && remaining !== null && remaining <= 10_000;
-    const color = preview ? hostTheme.accent : urgent ? hostTheme.danger : ratio > 0.4 ? hostTheme.positive : hostTheme.warning;
+    const color = preview
+      ? paint.accent
+      : urgent
+        ? paint.danger
+        : ratio > 0.4
+          ? paint.positive
+          : paint.warning;
+    const colorCss = preview
+      ? ink.accent
+      : urgent
+        ? ink.danger
+        : ratio > 0.4
+          ? ink.positive
+          : ink.warning;
 
     this.ringBase.clear();
-    this.ringBase.lineStyle(RING_WIDTH, hostTheme.outlineSoft, 0.85);
+    this.ringBase.lineStyle(RING_WIDTH, paint.line, 0.9);
     this.ringBase.strokeCircle(this.centerX, this.ringY, RING_RADIUS);
 
     this.ringProgress.clear();
@@ -409,11 +379,9 @@ export class BuzzwortStage {
     this.ringValue.setScale(pulse);
     this.ringValue.setText(seconds === null ? "–" : `${seconds}`);
 
-    const ringColor = `#${color.toString(16).padStart(6, "0")}`;
-
-    if (ringColor !== this.lastRingColor) {
-      this.lastRingColor = ringColor;
-      this.ringValue.setColor(ringColor);
+    if (colorCss !== this.lastRingColor) {
+      this.lastRingColor = colorCss;
+      this.ringValue.setColor(colorCss);
     }
 
     this.ringCaption.setText(
@@ -437,9 +405,7 @@ export class BuzzwortStage {
     en: boolean
   ): void {
     const phaseText = !state
-      ? en
-        ? "Lobby"
-        : "Lobby"
+      ? "Lobby"
       : state.turnPhase === "preview"
         ? en
           ? "GET READY"
@@ -458,12 +424,16 @@ export class BuzzwortStage {
     const badgeX = this.centerX - badgeWidth / 2;
     const badgeY = BUZZWORT_HUD_HEIGHT + 12;
     const badgeColor =
-      state?.turnPhase === "active" ? hostTheme.positive : state?.turnPhase === "preview" ? hostTheme.accent : hostTheme.outline;
+      state?.turnPhase === "active"
+        ? paint.positive
+        : state?.turnPhase === "preview"
+          ? paint.accent
+          : paint.lineStrong;
 
     this.phaseBadge.clear();
     this.phaseBadge.fillStyle(badgeColor, 0.2);
     this.phaseBadge.fillRoundedRect(badgeX, badgeY, badgeWidth, 28, 14);
-    this.phaseBadge.lineStyle(1.2, badgeColor, 0.8);
+    this.phaseBadge.lineStyle(1.2, badgeColor, 0.85);
     this.phaseBadge.strokeRoundedRect(badgeX, badgeY, badgeWidth, 28, 14);
 
     const explainerName = state?.currentTurnPlayerId
@@ -476,14 +446,9 @@ export class BuzzwortStage {
     this.explainerLabel.setText(
       teamLabel ? `${teamLabel} · ${en ? "explains" : "erklärt"}` : en ? "Explainer" : "Erklärer"
     );
+    this.explainerLabel.setColor(ink.muted);
     this.explainerName.setText(explainerName);
-    this.explainerName.setColor(
-      state?.currentTurnTeamId === "team2"
-        ? hostTheme.css.team2
-        : state?.currentTurnTeamId === "team1"
-          ? hostTheme.css.team1
-          : hostTheme.text
-    );
+    this.explainerName.setColor(state?.currentTurnTeamId ? teamInk(state.currentTurnTeamId) : ink.text);
 
     const watcherName = state?.currentWatcherPlayerId
       ? model.playerNames.get(state.currentWatcherPlayerId) ?? state.currentWatcherPlayerId
@@ -496,13 +461,14 @@ export class BuzzwortStage {
           ? "No watcher this turn"
           : "Kein Wächter in diesem Zug"
     );
-    this.watcherLine.setColor(watcherName ? hostTheme.css.danger : hostTheme.dim);
+    this.watcherLine.setColor(watcherName ? ink.danger : ink.muted);
 
     this.cardHint.setText(
       en
         ? "The term stays on the explainer's and watcher's phone."
         : "Der Begriff bleibt auf dem Handy von Erklärer und Wächter."
     );
+    this.cardHint.setColor(ink.soft);
 
     const solvedThisTurn = state?.turnSolved ?? 0;
     const turnLabel =
@@ -513,6 +479,7 @@ export class BuzzwortStage {
     this.turnCounter.setText(
       `${turnLabel}   ·   ${en ? "this turn" : "dieser Zug"}: ${solvedThisTurn}   ·   ${en ? "total" : "gesamt"}: ${state?.solvedTerms ?? 0}`
     );
+    this.turnCounter.setColor(ink.muted);
   }
 
   private updateSide(
@@ -522,8 +489,8 @@ export class BuzzwortStage {
   ): void {
     const teamMode = state?.mode === "team";
 
-    this.scoreTitle.setText(teamMode ? (en ? "TEAMS" : "TEAMS") : en ? "LEADERBOARD" : "RANGLISTE");
-    this.feedTitle.setText(en ? "LIVE" : "LIVE");
+    this.scoreTitle.setText(teamMode ? "TEAMS" : en ? "LEADERBOARD" : "RANGLISTE");
+    this.feedTitle.setText("LIVE");
 
     for (const panel of this.teamPanels) {
       const visible = teamMode;
@@ -543,10 +510,11 @@ export class BuzzwortStage {
         .filter((name): name is string => Boolean(name));
 
       panel.title.setText(`${panel.teamId === "team1" ? "Team 1" : "Team 2"}${isActive ? "  ▶" : ""}`);
-      panel.title.setColor(isActive ? hostTheme.text : hostTheme.muted);
+      panel.title.setColor(isActive ? ink.text : ink.muted);
       panel.score.setText(`${state?.scoreByTeamId?.[panel.teamId] ?? 0}`);
-      panel.score.setColor(panel.teamId === "team1" ? hostTheme.css.team1 : hostTheme.css.team2);
+      panel.score.setColor(teamInk(panel.teamId));
       panel.members.setText(memberNames.length > 0 ? memberNames.join(" · ") : en ? "no players" : "keine Spieler");
+      panel.members.setColor(ink.muted);
       panel.background.setAlpha(isActive ? 1 : 0.55);
     }
 
@@ -570,9 +538,9 @@ export class BuzzwortStage {
       const isActive = entry.playerId === state?.currentTurnPlayerId;
 
       row.name.setText(`${index + 1}. ${model.playerNames.get(entry.playerId) ?? entry.playerId}`);
-      row.name.setColor(isActive ? hostTheme.css.accent : hostTheme.text);
+      row.name.setColor(isActive ? ink.accent : ink.text);
       row.value.setText(`${entry.score}`);
-      row.value.setColor(hostTheme.css.accent);
+      row.value.setColor(ink.accent);
       row.background.setAlpha(isActive ? 1 : 0.6);
     });
 
@@ -590,12 +558,12 @@ export class BuzzwortStage {
       row.setText(this.formatEvent(event, en));
       row.setColor(
         event.kind === "solved"
-          ? hostTheme.css.positive
+          ? ink.positive
           : event.kind === "buzz"
-            ? hostTheme.css.danger
+            ? ink.danger
             : event.kind === "turn_start"
-              ? hostTheme.css.accent
-              : hostTheme.muted
+              ? ink.accent
+              : ink.muted
       );
       row.setAlpha(Math.max(0.35, 1 - index * 0.14));
     });
@@ -606,7 +574,7 @@ export class BuzzwortStage {
       case "solved":
         return `✅ „${event.term}"  ${event.actorName ?? ""}`;
       case "buzz":
-        return `🚫 ${"BUZZ"}  ${event.actorName ?? ""}`;
+        return `🚫 BUZZ  ${event.actorName ?? ""}`;
       case "skipped":
         return `⏭ ${en ? "skipped" : "übersprungen"}`;
       case "turn_start":
@@ -622,6 +590,7 @@ export class BuzzwortStage {
     const text = model.message ?? model.state?.lastTurnSummary;
 
     this.messageText.setText(text ?? (en ? "Waiting for the next turn." : "Warte auf den nächsten Zug."));
+    this.messageText.setColor(ink.text);
   }
 
   private detectEvents(state: BuzzwortControllerState | undefined, now: number): void {
@@ -639,21 +608,21 @@ export class BuzzwortStage {
     }
 
     if (newest.kind === "solved") {
-      this.flashColor = hostTheme.positive;
+      this.flashColor = paint.positive;
       this.flashUntil = now + 700;
-      this.spawnPop("+1", "#4ade80");
+      this.spawnPop("+1", ink.positive);
       return;
     }
 
     if (newest.kind === "buzz") {
-      this.flashColor = hostTheme.danger;
+      this.flashColor = paint.danger;
       this.flashUntil = now + 900;
-      this.spawnPop("BUZZ!", "#f87171");
+      this.spawnPop("BUZZ!", ink.danger);
       return;
     }
 
     if (newest.kind === "skipped") {
-      this.flashColor = hostTheme.warning;
+      this.flashColor = paint.warning;
       this.flashUntil = now + 450;
     }
   }

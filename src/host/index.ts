@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { buzzwortManifest } from "../manifest.js";
 import type { BuzzwortControllerState, BuzzwortMode } from "../protocol.js";
-import { hostTheme } from "./theme.js";
+import { tokens } from "./theme.js";
 import { BuzzwortHud } from "./BuzzwortHud.js";
 import { BuzzwortStage } from "./BuzzwortStage.js";
 import { renderRoundScreens } from "./roundScreens.js";
@@ -48,7 +48,7 @@ export class BuzzwortHostScene extends Phaser.Scene {
     bindPlatformTheme(this.registry);
     const client = this.registry.get("hostClient") as HostClientLike;
 
-    this.cameras.main.setBackgroundColor(hostTheme.panel);
+    this.cameras.main.setBackgroundColor(tokens().color.background);
 
     this.hud = new BuzzwortHud(this, {
       onSelectMode: (mode) => {

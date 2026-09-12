@@ -1,5 +1,7 @@
 import Phaser from "phaser";
+import { toPhaserColor } from "@open-party-lab/game-core";
 import { buzzwortManifest } from "../manifest.js";
+import { tokens } from "./platformTheme.js";
 
 /**
  * Round intro and result screens for Buzzwort.
@@ -19,22 +21,50 @@ const INTRO_PHASES = new Set(["round_intro", "countdown"]);
 const RESULT_PHASES = new Set(["result", "scoreboard", "finished"]);
 const OVERLAY_DEPTH = 10_000;
 
-/** Warm paper palette, matching the platform shell. */
+/**
+ * The overlay palette, read from the platform tokens at draw time.
+ *
+ * Getters rather than captured values: the platform mutates the token object in
+ * place on a skin switch, so a snapshot taken at module load would freeze the
+ * screens in whichever theme happened to be active first.
+ */
 const theme = {
-  background: "#f7f1e7",
-  surface: "#fffbf4",
-  surfaceMuted: "#f3ece0",
-  ink: "#24313a",
-  inkSoft: "#3d4b55",
-  muted: "#697178",
-  line: "#ded5c7",
-  accent: "#5b7f9c",
-  titleFont: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
-  bodyFont: 'Inter, ui-sans-serif, -apple-system, "Segoe UI", sans-serif',
-  monoFont: '"IBM Plex Mono", ui-monospace, Menlo, monospace'
+  get background(): string {
+    return tokens().color.background;
+  },
+  get surface(): string {
+    return tokens().color.surface;
+  },
+  get surfaceMuted(): string {
+    return tokens().color.surfaceMuted;
+  },
+  get ink(): string {
+    return tokens().color.text;
+  },
+  get inkSoft(): string {
+    return tokens().color.textSoft;
+  },
+  get muted(): string {
+    return tokens().color.muted;
+  },
+  get line(): string {
+    return tokens().color.line;
+  },
+  get accent(): string {
+    return tokens().color.accent;
+  },
+  get titleFont(): string {
+    return tokens().font.display;
+  },
+  get bodyFont(): string {
+    return tokens().font.body;
+  },
+  get monoFont(): string {
+    return tokens().font.mono;
+  }
 };
 
-const hex = (color: string): number => Number.parseInt(color.slice(1), 16);
+const hex = (color: string): number => toPhaserColor(color);
 
 interface ScoreEntryLike {
   playerId: string;

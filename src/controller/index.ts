@@ -74,9 +74,14 @@ interface ControllerGameRenderContext {
   onSetReady?: (isReady: boolean) => void;
 }
 
+/**
+ * Team identity colours as CSS custom properties, so the phone follows the
+ * room's theme instead of shipping its own palette. Accent and sage are the two
+ * tokens that stay clearly apart in both skins.
+ */
 const TEAM_COLORS: Record<BuzzwortTeamId, string> = {
-  team1: "#60a5fa",
-  team2: "#f472b6"
+  team1: "var(--accent)",
+  team2: "var(--sage)"
 };
 
 function buildReadyModel(context: ControllerGameRenderContext): ReadyLayoutModel | undefined {

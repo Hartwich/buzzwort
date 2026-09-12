@@ -1,47 +1,101 @@
+import type { BuzzwortTeamId } from "../protocol.js";
 import { tokenColor, tokens } from "./platformTheme.js";
-export const hostTheme = {
-  get panel() {
-    return tokens().color.surface;
-  },
-  get backgroundTop() {
+
+export { bindPlatformTheme, tokenColor, tokens } from "./platformTheme.js";
+
+/**
+ * Semantic view of the platform theme for this game's host screen.
+ *
+ * Everything is a getter, because the platform mutates the token object in
+ * place on a skin switch. Never destructure these into locals that outlive a
+ * frame.
+ *
+ * `paint` yields Phaser colour numbers for draw calls, `ink` yields CSS strings
+ * for text styles, `font` yields font stacks.
+ */
+export const paint = {
+  get background(): number {
     return tokenColor((theme) => theme.color.background);
   },
-  get backgroundBottom() {
+  get backgroundDeep(): number {
     return tokenColor((theme) => theme.color.backgroundDeep);
   },
-
-  surface: 0x101c34,
-  surfaceSoft: 0x16233d,
-  outline: 0x2a3c5e,
-  outlineSoft: 0x1d2b47,
-
-  accent: 0x60a5fa,
-  accentSoft: 0xbfdbfe,
-  positive: 0x4ade80,
-  warning: 0xfbbf24,
-  danger: 0xf87171,
-
-  team1: 0x60a5fa,
-  team2: 0xf472b6,
-
-  titleFont: '"Space Grotesk", sans-serif',
-  bodyFont: '"Nunito Sans", sans-serif',
-  monoFont: '"JetBrains Mono", Consolas, monospace',
-
-  text: tokens().color.text,
-  muted: tokens().color.muted,
-  dim: tokens().color.muted,
-
-  css: {
-    accent: "#60a5fa",
-    positive: "#4ade80",
-    warning: "#fbbf24",
-    danger: "#f87171",
-    team1: "#60a5fa",
-    team2: "#f472b6"
+  get surface(): number {
+    return tokenColor((theme) => theme.color.surface);
+  },
+  get surfaceMuted(): number {
+    return tokenColor((theme) => theme.color.surfaceMuted);
+  },
+  get surfaceRaised(): number {
+    return tokenColor((theme) => theme.color.surfaceRaised);
+  },
+  get line(): number {
+    return tokenColor((theme) => theme.color.line);
+  },
+  get lineStrong(): number {
+    return tokenColor((theme) => theme.color.lineStrong);
+  },
+  get accent(): number {
+    return tokenColor((theme) => theme.color.accent);
+  },
+  get positive(): number {
+    return tokenColor((theme) => theme.color.success);
+  },
+  get warning(): number {
+    return tokenColor((theme) => theme.color.warning);
+  },
+  get danger(): number {
+    return tokenColor((theme) => theme.color.danger);
   }
-} as const;
+};
 
-export function toCss(value: number): string {
-  return `#${value.toString(16).padStart(6, "0")}`;
+export const ink = {
+  get text(): string {
+    return tokens().color.text;
+  },
+  get soft(): string {
+    return tokens().color.textSoft;
+  },
+  get muted(): string {
+    return tokens().color.muted;
+  },
+  get accent(): string {
+    return tokens().color.accent;
+  },
+  get positive(): string {
+    return tokens().color.success;
+  },
+  get warning(): string {
+    return tokens().color.warning;
+  },
+  get danger(): string {
+    return tokens().color.danger;
+  }
+};
+
+export const font = {
+  get title(): string {
+    return tokens().font.display;
+  },
+  get body(): string {
+    return tokens().font.body;
+  },
+  get mono(): string {
+    return tokens().font.mono;
+  }
+};
+
+/**
+ * Team identity colours.
+ *
+ * Accent and success are the two tokens that stay clearly distinguishable in
+ * both skins (terracotta vs sage on paper, sky vs emerald on the dark stage),
+ * so the teams borrow those rather than shipping their own hard-coded hues.
+ */
+export function teamPaint(teamId: BuzzwortTeamId): number {
+  return teamId === "team1" ? paint.accent : paint.positive;
+}
+
+export function teamInk(teamId: BuzzwortTeamId): string {
+  return teamId === "team1" ? ink.accent : ink.positive;
 }
