@@ -182,6 +182,7 @@ export class BuzzwortHud {
 
   update(model: BuzzwortHudModel): void {
     const en = model.language === "en";
+    this.title.setText(en ? "BUZZWORD" : "BUZZWORT");
 
     this.roomLabel.setText(`${en ? "ROOM" : "RAUM"} ${model.roomCode}`);
     this.hint.setText(

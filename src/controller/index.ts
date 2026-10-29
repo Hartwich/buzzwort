@@ -352,7 +352,7 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
 
   return {
     kind: "secret_card",
-    title: buzzwortManifest.displayName,
+    title: buzzwortManifest.translations[en ? "en" : "de"].displayName,
     subtitle: subtitleParts.join(" · "),
     disabled: !isActive,
     roleLabel: buzzwort.roleLabel ?? (en ? "Player" : "Spieler"),

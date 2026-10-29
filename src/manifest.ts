@@ -1,7 +1,9 @@
+import { buzzwortText } from "./catalogText.js";
 import type { GameManifest } from "@open-party-lab/game-core";
 
 export const buzzwortManifest = {
   id: "buzzwort",
+  translations: buzzwortText,
   displayName: "Buzzwort",
   description: "Erklaere Begriffe gegen die Uhr, ohne die verbotenen Woerter zu sagen - ein Waechter passt auf.",
   minPlayers: 3,
