@@ -250,8 +250,78 @@ export const buzzwortCardsEn: readonly BuzzwortCard[] = [
   { id: "en-104", term: "Twins", forbidden: ["two", "same", "siblings", "born", "confuse"], category: "abstrakt", difficulty: 2 }
 ];
 
+// A translated starter deck reuses the stable card IDs from the German source.
+export const buzzwortCardsEs: readonly BuzzwortCard[] = [
+  { id: "de-001", term: "Piña", forbidden: ["fruta", "pizza", "Hawái", "espinosa", "lata"], category: "essen", difficulty: 1 },
+  { id: "de-002", term: "Semáforo", forbidden: ["rojo", "verde", "calle", "auto", "cruce"], category: "alltag", difficulty: 1 },
+  { id: "de-003", term: "Farmacia", forbidden: ["medicamento", "receta", "médico", "enfermo", "pastilla"], category: "orte", difficulty: 1 },
+  { id: "de-004", term: "Astronauta", forbidden: ["espacio", "cohete", "Luna", "NASA", "gravedad"], category: "beruf", difficulty: 1 },
+  { id: "de-005", term: "Autopista", forbidden: ["auto", "rápido", "límite", "tráfico", "conducir"], category: "orte", difficulty: 2 },
+  { id: "de-006", term: "Horno", forbidden: ["cocina", "hornear", "pastel", "caliente", "grados"], category: "alltag", difficulty: 1 },
+  { id: "de-007", term: "Bañera", forbidden: ["agua", "bañarse", "baño", "espuma", "ducha"], category: "alltag", difficulty: 1 },
+  { id: "de-008", term: "Globo", forbidden: ["aire", "inflar", "reventar", "cumpleaños", "color"], category: "alltag", difficulty: 1 },
+  { id: "de-009", term: "Batería", forbidden: ["electricidad", "descargada", "cargar", "pilas", "control"], category: "technik", difficulty: 2 },
+  { id: "de-010", term: "Biblioteca", forbidden: ["libro", "silencio", "préstamo", "estante", "leer"], category: "orte", difficulty: 1 },
+  { id: "de-011", term: "Colmena", forbidden: ["abeja", "miel", "apicultor", "zumbido", "panal"], category: "natur", difficulty: 2 },
+  { id: "de-012", term: "Relámpago", forbidden: ["tormenta", "trueno", "cielo", "lluvia", "electricidad"], category: "natur", difficulty: 1 },
+  { id: "de-013", term: "Gafas", forbidden: ["ver", "ojos", "nariz", "cristales", "óptica"], category: "alltag", difficulty: 1 },
+  { id: "de-014", term: "Clip", forbidden: ["papel", "metal", "juntar", "escritorio", "doblar"], category: "alltag", difficulty: 2 },
+  { id: "de-015", term: "Camping", forbidden: ["carpa", "vacaciones", "caravana", "fogata", "dormir"], category: "orte", difficulty: 2 },
+  { id: "de-016", term: "Payaso", forbidden: ["circo", "gracioso", "nariz", "maquillaje", "niños"], category: "kultur", difficulty: 1 },
+  { id: "de-017", term: "Ático", forbidden: ["casa", "arriba", "trastos", "escalera", "polvo"], category: "orte", difficulty: 2 },
+  { id: "de-018", term: "Delfín", forbidden: ["mar", "agua", "nadar", "inteligente", "aleta"], category: "tiere", difficulty: 1 },
+  { id: "de-019", term: "Diamante", forbidden: ["caro", "anillo", "duro", "piedra", "brillar"], category: "alltag", difficulty: 2 },
+  { id: "de-020", term: "Dinosaurio", forbidden: ["extinto", "T-Rex", "prehistoria", "museo", "huesos"], category: "tiere", difficulty: 1 }
+];
+
+export const buzzwortCardsFr: readonly BuzzwortCard[] = [
+  { id: "de-001", term: "Ananas", forbidden: ["fruit", "pizza", "Hawaï", "piquant", "boîte"], category: "essen", difficulty: 1 },
+  { id: "de-002", term: "Feu tricolore", forbidden: ["rouge", "vert", "rue", "voiture", "carrefour"], category: "alltag", difficulty: 1 },
+  { id: "de-003", term: "Pharmacie", forbidden: ["médicament", "ordonnance", "médecin", "malade", "comprimé"], category: "orte", difficulty: 1 },
+  { id: "de-004", term: "Astronaute", forbidden: ["espace", "fusée", "Lune", "NASA", "apesanteur"], category: "beruf", difficulty: 1 },
+  { id: "de-005", term: "Autoroute", forbidden: ["voiture", "vitesse", "limite", "bouchon", "conduire"], category: "orte", difficulty: 2 },
+  { id: "de-006", term: "Four", forbidden: ["cuisine", "cuire", "gâteau", "chaud", "degrés"], category: "alltag", difficulty: 1 },
+  { id: "de-007", term: "Baignoire", forbidden: ["eau", "bain", "salle de bains", "mousse", "douche"], category: "alltag", difficulty: 1 },
+  { id: "de-008", term: "Ballon", forbidden: ["air", "gonfler", "éclater", "anniversaire", "couleur"], category: "alltag", difficulty: 1 },
+  { id: "de-009", term: "Pile", forbidden: ["courant", "déchargée", "recharger", "AA", "télécommande"], category: "technik", difficulty: 2 },
+  { id: "de-010", term: "Bibliothèque", forbidden: ["livre", "silence", "emprunter", "étagère", "lire"], category: "orte", difficulty: 1 },
+  { id: "de-011", term: "Ruche", forbidden: ["abeille", "miel", "apiculteur", "bourdonner", "alvéoles"], category: "natur", difficulty: 2 },
+  { id: "de-012", term: "Éclair", forbidden: ["orage", "tonnerre", "ciel", "pluie", "électricité"], category: "natur", difficulty: 1 },
+  { id: "de-013", term: "Lunettes", forbidden: ["voir", "yeux", "nez", "verres", "opticien"], category: "alltag", difficulty: 1 },
+  { id: "de-014", term: "Trombone", forbidden: ["papier", "métal", "attacher", "bureau", "plier"], category: "alltag", difficulty: 2 },
+  { id: "de-015", term: "Camping", forbidden: ["tente", "vacances", "caravane", "feu de camp", "dormir"], category: "orte", difficulty: 2 },
+  { id: "de-016", term: "Clown", forbidden: ["cirque", "drôle", "nez", "maquillage", "enfants"], category: "kultur", difficulty: 1 },
+  { id: "de-017", term: "Grenier", forbidden: ["maison", "en haut", "bazar", "escalier", "poussière"], category: "orte", difficulty: 2 },
+  { id: "de-018", term: "Dauphin", forbidden: ["mer", "eau", "nager", "intelligent", "nageoire"], category: "tiere", difficulty: 1 },
+  { id: "de-019", term: "Diamant", forbidden: ["cher", "bague", "dur", "pierre", "briller"], category: "alltag", difficulty: 2 },
+  { id: "de-020", term: "Dinosaure", forbidden: ["disparu", "T-Rex", "préhistoire", "musée", "os"], category: "tiere", difficulty: 1 }
+];
+
+export const buzzwortCardsPtBr: readonly BuzzwortCard[] = [
+  { id: "de-001", term: "Abacaxi", forbidden: ["fruta", "pizza", "Havaí", "espinhoso", "lata"], category: "essen", difficulty: 1 },
+  { id: "de-002", term: "Semáforo", forbidden: ["vermelho", "verde", "rua", "carro", "cruzamento"], category: "alltag", difficulty: 1 },
+  { id: "de-003", term: "Farmácia", forbidden: ["remédio", "receita", "médico", "doente", "comprimido"], category: "orte", difficulty: 1 },
+  { id: "de-004", term: "Astronauta", forbidden: ["espaço", "foguete", "Lua", "NASA", "gravidade"], category: "beruf", difficulty: 1 },
+  { id: "de-005", term: "Rodovia", forbidden: ["carro", "rápido", "limite", "engarrafamento", "dirigir"], category: "orte", difficulty: 2 },
+  { id: "de-006", term: "Forno", forbidden: ["cozinha", "assar", "bolo", "quente", "graus"], category: "alltag", difficulty: 1 },
+  { id: "de-007", term: "Banheira", forbidden: ["água", "banho", "banheiro", "espuma", "chuveiro"], category: "alltag", difficulty: 1 },
+  { id: "de-008", term: "Balão", forbidden: ["ar", "encher", "estourar", "aniversário", "colorido"], category: "alltag", difficulty: 1 },
+  { id: "de-009", term: "Pilha", forbidden: ["energia", "descarregada", "recarregar", "AA", "controle remoto"], category: "technik", difficulty: 2 },
+  { id: "de-010", term: "Biblioteca", forbidden: ["livro", "silêncio", "emprestar", "estante", "ler"], category: "orte", difficulty: 1 },
+  { id: "de-011", term: "Colmeia", forbidden: ["abelha", "mel", "apicultor", "zumbido", "favos"], category: "natur", difficulty: 2 },
+  { id: "de-012", term: "Raio", forbidden: ["tempestade", "trovão", "céu", "chuva", "eletricidade"], category: "natur", difficulty: 1 },
+  { id: "de-013", term: "Óculos", forbidden: ["enxergar", "olhos", "nariz", "lentes", "óptica"], category: "alltag", difficulty: 1 },
+  { id: "de-014", term: "Clipe", forbidden: ["papel", "metal", "juntar", "mesa", "dobrar"], category: "alltag", difficulty: 2 },
+  { id: "de-015", term: "Camping", forbidden: ["barraca", "férias", "trailer", "fogueira", "dormir"], category: "orte", difficulty: 2 },
+  { id: "de-016", term: "Palhaço", forbidden: ["circo", "engraçado", "nariz", "maquiagem", "crianças"], category: "kultur", difficulty: 1 },
+  { id: "de-017", term: "Sótão", forbidden: ["casa", "em cima", "tralha", "escada", "poeira"], category: "orte", difficulty: 2 },
+  { id: "de-018", term: "Golfinho", forbidden: ["mar", "água", "nadar", "inteligente", "barbatana"], category: "tiere", difficulty: 1 },
+  { id: "de-019", term: "Diamante", forbidden: ["caro", "anel", "duro", "pedra", "brilhar"], category: "alltag", difficulty: 2 },
+  { id: "de-020", term: "Dinossauro", forbidden: ["extinto", "T-Rex", "pré-história", "museu", "ossos"], category: "tiere", difficulty: 1 }
+];
+
 export function resolveBuzzwortDeck(language: string): readonly BuzzwortCard[] {
-  return language === "en" ? buzzwortCardsEn : buzzwortCardsDe;
+  return language === "en" ? buzzwortCardsEn : language === "es" ? buzzwortCardsEs : language === "fr" ? buzzwortCardsFr : language === "pt-BR" ? buzzwortCardsPtBr : buzzwortCardsDe;
 }
 
 /** Rueckwaertskompatibler Export fuer bestehende Importe. */

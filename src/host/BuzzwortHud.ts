@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { SupportedLanguage } from "@open-party-lab/game-core";
 import type { BuzzwortMode } from "../protocol.js";
+import { buzzText } from "../uiText.js";
 import { font, ink, paint } from "./theme.js";
 
 export interface BuzzwortHudCallbacks {
@@ -181,33 +182,25 @@ export class BuzzwortHud {
   }
 
   update(model: BuzzwortHudModel): void {
-    const en = model.language === "en";
-    this.title.setText(en ? "BUZZWORD" : "BUZZWORT");
+    const t = (de: string, en: string, es: string, fr: string, pt: string) => buzzText(model.language, de, en, es, fr, pt);
+    this.title.setText(t("BUZZWORT", "BUZZWORD", "PALABRA PROHIBIDA", "MOT INTERDIT", "PALAVRA PROIBIDA"));
 
-    this.roomLabel.setText(`${en ? "ROOM" : "RAUM"} ${model.roomCode}`);
+    this.roomLabel.setText(`${t("RAUM", "ROOM", "SALA", "SALLE", "SALA")} ${model.roomCode}`);
     this.hint.setText(
       model.locked
-        ? en
-          ? "Settings are locked while a round is running."
-          : "Einstellungen sind während einer laufenden Runde gesperrt."
-        : en
-          ? "Pick mode, watcher and turn length before you start."
-          : "Modus, Wächter und Zuglänge vor dem Start wählen."
+        ? t("Einstellungen sind während einer Runde gesperrt.", "Settings are locked while a round is running.", "La configuración se bloquea durante la partida.", "Les réglages sont verrouillés pendant la manche.", "As configurações ficam bloqueadas durante a rodada.")
+        : t("Modus, Wächter und Zuglänge vor dem Start wählen.", "Pick mode, watcher and turn length before you start.", "Elijan modo, vigilante y duración antes de empezar.", "Choisissez le mode, le surveillant et la durée avant de commencer.", "Escolham o modo, o fiscal e a duração antes de começar.")
     );
 
-    this.setChip("mode:duel", en ? "Free-for-all" : "Jeder gegen jeden", model.mode === "duel", model.locked);
-    this.setChip("mode:team", en ? "Team mode" : "Teammodus", model.mode === "team", model.locked);
+    this.setChip("mode:duel", t("Jeder gegen jeden", "Free-for-all", "Todos contra todos", "Chacun pour soi", "Cada um por si"), model.mode === "duel", model.locked);
+    this.setChip("mode:team", t("Teammodus", "Team mode", "Modo por equipos", "Mode équipes", "Modo em equipe"), model.mode === "team", model.locked);
 
     const watcherLocked = model.locked || model.mode === "team";
     this.setChip(
       "watcher",
       model.watcherEnabled
-        ? en
-          ? "Watcher: on"
-          : "Wächter: an"
-        : en
-          ? "Watcher: off"
-          : "Wächter: aus",
+        ? t("Wächter: an", "Watcher: on", "Vigilante: activado", "Surveillance : activée", "Fiscal: ligado")
+        : t("Wächter: aus", "Watcher: off", "Vigilante: desactivado", "Surveillance : désactivée", "Fiscal: desligado"),
       model.watcherEnabled,
       watcherLocked
     );

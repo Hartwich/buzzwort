@@ -1,4 +1,4 @@
-import type { ControllerLayoutKey } from "@open-party-lab/game-core";
+import type { ControllerLayoutKey, SupportedLanguage } from "@open-party-lab/game-core";
 import { buzzwortManifest } from "../manifest.js";
 import type { BuzzwortControllerState, BuzzwortEvent, BuzzwortTeamId } from "../protocol.js";
 import {
@@ -6,6 +6,7 @@ import {
   createBuzzwortSkipInput,
   createBuzzwortViolationInput
 } from "./buzzwortBindings.js";
+import { buzzText } from "../uiText.js";
 
 type Tone = "positive" | "neutral" | "danger";
 type RoleTone = "primary" | "watch" | "guess" | "bench";
@@ -16,7 +17,7 @@ interface ReadyLayoutModel {
   playerCount: number;
   label: string;
   description?: string;
-  language?: "de" | "en";
+  language?: SupportedLanguage;
   onToggleReady: () => void;
 }
 
@@ -53,9 +54,9 @@ interface SecretCardLayoutModel {
 
 interface ControllerGameRenderContext {
   state: {
-    preferredLanguage?: "de" | "en";
+    preferredLanguage?: SupportedLanguage;
     room?: {
-      language?: "de" | "en";
+      language?: SupportedLanguage;
       selectedGameId?: string;
       availableGames?: Array<{ id: string; displayName?: string; roundCompletionMode?: string }>;
       players?: Array<{ id: string; name: string; isReady?: boolean }>;
@@ -105,32 +106,32 @@ function buildReadyModel(context: ControllerGameRenderContext): ReadyLayoutModel
     players.find((player) => player.id === playerId)?.isReady ?? state.player.isReady
   );
   const readyCount = players.filter((player) => player.isReady).length;
-  const en = state.room.language === "en";
+  const language = state.room.language ?? "de";
+  const t = (de: string, en: string, es: string, fr: string, pt: string) => buzzText(language, de, en, es, fr, pt);
 
   return {
     currentPlayerReady,
     readyCount,
     playerCount: players.length,
-    label: en ? "Next round" : "Nächste Runde",
-    description: en
-      ? `${readyCount}/${players.length} players are ready.`
-      : `${readyCount}/${players.length} Spieler sind bereit.`,
+    label: t("Nächste Runde", "Next round", "Siguiente ronda", "Manche suivante", "Próxima rodada"),
+    description: t(`${readyCount}/${players.length} Spieler sind bereit.`, `${readyCount}/${players.length} players are ready.`, `${readyCount}/${players.length} jugadores listos.`, `${readyCount}/${players.length} joueurs prêts.`, `${readyCount}/${players.length} jogadores prontos.`),
     language: state.room.language,
     onToggleReady: () => onSetReady(!currentPlayerReady)
   };
 }
 
-function formatEvent(event: BuzzwortEvent, en: boolean): { text: string; tone: Tone } | null {
+function formatEvent(event: BuzzwortEvent, language: SupportedLanguage): { text: string; tone: Tone } | null {
+  const t = (de: string, en: string, es: string, fr: string, pt: string) => buzzText(language, de, en, es, fr, pt);
   switch (event.kind) {
     case "solved":
       return { text: `✅ „${event.term}" — ${event.actorName}`, tone: "positive" };
     case "buzz":
       return { text: `🚫 ${"BUZZ"}: „${event.term}" (${event.actorName})`, tone: "danger" };
     case "skipped":
-      return { text: `⏭ „${event.term}" ${en ? "skipped" : "übersprungen"}`, tone: "neutral" };
+      return { text: `⏭ „${event.term}" ${t("übersprungen", "skipped", "se saltó", "passé", "foi pulada")}`, tone: "neutral" };
     case "turn_end":
       return {
-        text: `🏁 ${event.actorName}: ${event.points ?? 0} ${en ? "terms" : "Begriffe"}`,
+        text: `🏁 ${event.actorName}: ${event.points ?? 0} ${t("Begriffe", "terms", "palabras", "mots", "palavras")}`,
         tone: "neutral"
       };
     default:
@@ -142,7 +143,7 @@ function buildScoreRows(
   buzzwort: BuzzwortControllerState,
   playerNames: Map<string, string>,
   myPlayerId: string,
-  en: boolean
+  language: SupportedLanguage
 ): SecretCardLayoutModel["scoreRows"] {
   if (buzzwort.mode === "team") {
     return (["team1", "team2"] as const).map((teamId) => {
@@ -170,7 +171,7 @@ function buildScoreRows(
     return [
       {
         id: "empty",
-        label: en ? "No points yet" : "Noch keine Punkte",
+        label: buzzText(language, "Noch keine Punkte", "No points yet", "Todavía sin puntos", "Pas encore de points", "Ainda sem pontos"),
         value: "0"
       }
     ];
@@ -186,7 +187,8 @@ function buildScoreRows(
 
 function buildBuzzwortControllerModel(context: ControllerGameRenderContext): SecretCardLayoutModel {
   const { state, onInput } = context;
-  const en = state.room?.language === "en";
+  const language = state.room?.language ?? state.preferredLanguage ?? "de";
+  const t = (de: string, en: string, es: string, fr: string, pt: string) => buzzText(language, de, en, es, fr, pt);
   const playerId = state.player?.id ?? "";
   const buzzwort = (state.game?.state ?? {}) as BuzzwortControllerState;
   const players = state.room?.players ?? [];
@@ -211,20 +213,14 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
 
   const statusLabel =
     buzzwort.turnPhase === "preview"
-      ? en
-        ? "Get ready"
-        : "Bereit machen"
+      ? t("Bereit machen", "Get ready", "Prepárate", "Préparez-vous", "Prepare-se")
       : buzzwort.turnPhase === "handover"
-        ? en
-          ? "Turn over"
-          : "Zug vorbei"
-        : en
-          ? "Live"
-          : "Läuft";
+        ? t("Zug vorbei", "Turn over", "Fin del turno", "Fin du tour", "Fim do turno")
+        : t("Läuft", "Live", "En curso", "En cours", "Ao vivo");
 
   const turnLabel =
     buzzwort.totalTurns > 0
-      ? `${en ? "Turn" : "Zug"} ${Math.min(buzzwort.turnIndex + 1, buzzwort.totalTurns)}/${buzzwort.totalTurns}`
+      ? `${t("Zug", "Turn", "Turno", "Tour", "Turno")} ${Math.min(buzzwort.turnIndex + 1, buzzwort.totalTurns)}/${buzzwort.totalTurns}`
       : "";
 
   const subtitleParts = [buzzwort.modeLabel, turnLabel].filter(Boolean);
@@ -232,7 +228,7 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
   if (buzzwort.mode === "team" && buzzwort.activeTeamLabel) {
     subtitleParts.push(`${buzzwort.activeTeamLabel} · ${explainerName ?? "?"}`);
   } else if (explainerName) {
-    subtitleParts.push(`${en ? "Explains" : "Erklärt"}: ${explainerName}`);
+    subtitleParts.push(`${t("Erklärt", "Explains", "Explica", "Fait deviner", "Explica")}: ${explainerName}`);
   }
 
   const actions: NonNullable<SecretCardLayoutModel["actions"]> = [];
@@ -242,8 +238,8 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
     if (buzzwort.mode === "team") {
       actions.push({
         id: "buzzwort:solved",
-        label: en ? "✅ Correct!" : "✅ Richtig!",
-        sublabel: en ? "Your team guessed it" : "Euer Team hat es",
+        label: t("✅ Richtig!", "✅ Correct!", "✅ ¡Correcto!", "✅ Trouvé !", "✅ Acertou!"),
+        sublabel: t("Euer Team hat es", "Your team guessed it", "Tu equipo acertó", "Votre équipe a trouvé", "Seu time acertou"),
         tone: "positive",
         disabled: !isActive,
         onPress: () => onInput(createBuzzwortCorrectInput(playerId))
@@ -261,10 +257,8 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
 
     actions.push({
       id: "buzzwort:skip",
-      label: en ? "⏭ Skip" : "⏭ Überspringen",
-      sublabel: en
-        ? `${buzzwort.skipsLeft ?? 0} left this turn`
-        : `Noch ${buzzwort.skipsLeft ?? 0} in diesem Zug`,
+      label: t("⏭ Überspringen", "⏭ Skip", "⏭ Saltar", "⏭ Passer", "⏭ Pular"),
+      sublabel: t(`Noch ${buzzwort.skipsLeft ?? 0} in diesem Zug`, `${buzzwort.skipsLeft ?? 0} left this turn`, `Quedan ${buzzwort.skipsLeft ?? 0} en este turno`, `Encore ${buzzwort.skipsLeft ?? 0} pour ce tour`, `Restam ${buzzwort.skipsLeft ?? 0} neste turno`),
       tone: "neutral",
       disabled: !isActive || (buzzwort.skipsLeft ?? 0) <= 0,
       onPress: () => onInput(createBuzzwortSkipInput(playerId))
@@ -275,7 +269,7 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
     actions.push({
       id: "buzzwort:violation",
       label: "🚫 BUZZ!",
-      sublabel: en ? "Forbidden word used" : "Verbotenes Wort benutzt",
+      sublabel: t("Verbotenes Wort benutzt", "Forbidden word used", "Se usó una palabra prohibida", "Mot interdit prononcé", "Palavra proibida usada"),
       tone: "danger",
       disabled: !isActive,
       onPress: () => onInput(createBuzzwortViolationInput(playerId))
@@ -289,18 +283,14 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
 
     if (buzzwort.turnPhase === "preview") {
       if (buzzwort.isExplainer) {
-        return en
-          ? "Read the card. The timer starts in a moment."
-          : "Lies die Karte. Gleich startet der Timer.";
+        return t("Lies die Karte. Gleich startet der Timer.", "Read the card. The timer starts in a moment.", "Lee la tarjeta. El reloj empieza enseguida.", "Lisez la carte. Le chrono démarre dans un instant.", "Leia a carta. O cronômetro começa já.");
       }
 
       if (buzzwort.isWatcher) {
-        return en
-          ? "You are the watcher. Listen carefully — buzz on any forbidden word."
-          : "Du bist Wächter. Hör genau hin und drücke bei jedem verbotenen Wort.";
+        return t("Du bist Wächter. Hör genau hin und drücke bei jedem verbotenen Wort.", "You are the watcher. Listen carefully — buzz on any forbidden word.", "Eres el vigilante. Escucha y toca al oír una palabra prohibida.", "Vous surveillez. Écoutez bien et buzzez dès qu’un mot interdit est prononcé.", "Você é o fiscal. Escute com atenção e aperte ao ouvir uma palavra proibida.");
       }
 
-      return en ? "Get ready to guess!" : "Gleich geht's ans Raten!";
+      return t("Gleich geht's ans Raten!", "Get ready to guess!", "¡Prepárate para adivinar!", "Préparez-vous à deviner !", "Prepare-se para adivinhar!");
     }
 
     if (buzzwort.turnPhase === "handover") {
@@ -309,42 +299,30 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
 
     if (buzzwort.isExplainer) {
       return buzzwort.mode === "team"
-        ? en
-          ? "Explain without the crossed-out words. Tap Correct for every term your team gets."
-          : "Erkläre ohne die durchgestrichenen Wörter. Tippe bei jedem Treffer auf Richtig."
-        : en
-          ? "Explain the term, then tap the player who guessed it."
-          : "Erkläre den Begriff und tippe dann den Spieler an, der ihn erraten hat.";
+        ? t("Erkläre ohne die durchgestrichenen Wörter. Tippe bei jedem Treffer auf Richtig.", "Explain without the crossed-out words. Tap Correct for every term your team gets.", "Explica sin usar las palabras tachadas. Pulsa Correcto por cada acierto de tu equipo.", "Faites deviner sans utiliser les mots barrés. Appuyez sur Trouvé à chaque bonne réponse.", "Explique sem usar as palavras riscadas. Toque em Acertou a cada palavra do seu time.")
+        : t("Erkläre den Begriff und tippe dann den Spieler an, der ihn erraten hat.", "Explain the term, then tap the player who guessed it.", "Explica el concepto y toca a quien lo adivinó.", "Faites deviner le mot, puis choisissez la personne qui l’a trouvé.", "Explique a palavra e toque em quem acertou.");
     }
 
     if (buzzwort.isWatcher) {
-      return en
-        ? "Do not say anything — just buzz if a forbidden word slips out."
-        : "Nichts verraten — nur drücken, wenn ein verbotenes Wort fällt.";
+      return t("Nichts verraten — nur drücken, wenn ein verbotenes Wort fällt.", "Do not say anything — just buzz if a forbidden word slips out.", "No digas nada; toca si alguien dice una palabra prohibida.", "Ne dites rien : buzzez uniquement si un mot interdit est prononcé.", "Não diga nada — aperte apenas se alguém falar uma palavra proibida.");
     }
 
     if (buzzwort.role === "bench") {
-      return en
-        ? `${explainerName ?? "?"} is explaining for the other team. Sit tight.`
-        : `${explainerName ?? "?"} erklärt für das andere Team. Kurz durchatmen.`;
+      return t(`${explainerName ?? "?"} erklärt für das andere Team. Kurz durchatmen.`, `${explainerName ?? "?"} is explaining for the other team. Sit tight.`, `${explainerName ?? "?"} explica para el otro equipo. Espera un momento.`, `${explainerName ?? "?"} fait deviner à l’autre équipe. Patientez.`, `${explainerName ?? "?"} está explicando para o outro time. Aguarde um pouco.`);
     }
 
-    return en ? "Shout out your guesses!" : "Ruf deine Vorschläge rein!";
+    return t("Ruf deine Vorschläge rein!", "Shout out your guesses!", "¡Di tus respuestas en voz alta!", "Annoncez vos réponses à voix haute !", "Fale seus palpites em voz alta!");
   })();
 
   const hiddenCardHint = buzzwort.card
     ? undefined
     : buzzwort.role === "bench"
-      ? en
-        ? "The other team is playing."
-        : "Das andere Team ist dran."
-      : en
-        ? `Only ${explainerName ?? "the explainer"}${watcherName ? ` and ${watcherName}` : ""} can see the card.`
-        : `Nur ${explainerName ?? "der Erklärer"}${watcherName ? ` und ${watcherName}` : ""} sehen die Karte.`;
+      ? t("Das andere Team ist dran.", "The other team is playing.", "Está jugando el otro equipo.", "L’autre équipe joue.", "O outro time está jogando.")
+      : t(`Nur ${explainerName ?? "der Erklärer"}${watcherName ? ` und ${watcherName}` : ""} sehen die Karte.`, `Only ${explainerName ?? "the explainer"}${watcherName ? ` and ${watcherName}` : ""} can see the card.`, `Solo ${explainerName ?? "quien explica"}${watcherName ? ` y ${watcherName}` : ""} ven la tarjeta.`, `Seuls ${explainerName ?? "la personne qui fait deviner"}${watcherName ? ` et ${watcherName}` : ""} voient la carte.`, `Só ${explainerName ?? "quem explica"}${watcherName ? ` e ${watcherName}` : ""} podem ver a carta.`);
 
   const feed = (buzzwort.events ?? [])
     .map((event) => {
-      const formatted = formatEvent(event, en);
+      const formatted = formatEvent(event, language);
       return formatted ? { id: event.id, text: formatted.text, tone: formatted.tone } : null;
     })
     .filter((entry): entry is { id: string; text: string; tone: Tone } => entry !== null)
@@ -352,10 +330,10 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
 
   return {
     kind: "secret_card",
-    title: buzzwortManifest.translations[en ? "en" : "de"].displayName,
+    title: buzzwortManifest.translations[language]?.displayName ?? buzzwortManifest.translations.de.displayName,
     subtitle: subtitleParts.join(" · "),
     disabled: !isActive,
-    roleLabel: buzzwort.roleLabel ?? (en ? "Player" : "Spieler"),
+    roleLabel: buzzwort.roleLabel ?? t("Spieler", "Player", "Jugador", "Joueur", "Jogador"),
     roleTone,
     statusLabel: isPlaying ? statusLabel : undefined,
     helperText,
@@ -368,20 +346,20 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
       ? {
           term: buzzwort.card.term,
           forbidden: buzzwort.card.forbidden,
-          tag: buzzwort.isWatcher ? (en ? "Watcher view" : "Wächter-Ansicht") : undefined
+          tag: buzzwort.isWatcher ? t("Wächter-Ansicht", "Watcher view", "Vista de vigilancia", "Vue du surveillant", "Visão do fiscal") : undefined
         }
       : null,
     hiddenCardHint,
     actions,
-    targetsTitle: targets.length > 0 ? (en ? "Who guessed it?" : "Wer hat es erraten?") : undefined,
+    targetsTitle: targets.length > 0 ? t("Wer hat es erraten?", "Who guessed it?", "¿Quién lo adivinó?", "Qui a trouvé ?", "Quem acertou?") : undefined,
     targets,
-    scoreRows: buildScoreRows(buzzwort, playerNames, playerId, en),
-    feedTitle: feed.length > 0 ? (en ? "Recent" : "Zuletzt") : undefined,
+    scoreRows: buildScoreRows(buzzwort, playerNames, playerId, language),
+    feedTitle: feed.length > 0 ? t("Zuletzt", "Recent", "Reciente", "Récent", "Recentes") : undefined,
     feed,
     stats: [
-      { label: en ? "This turn" : "Dieser Zug", value: `${buzzwort.turnSolved ?? 0}`, highlighted: true },
-      { label: en ? "Total" : "Gesamt", value: `${buzzwort.solvedTerms ?? 0}` },
-      { label: en ? "Role" : "Rolle", value: buzzwort.roleLabel ?? "-" }
+      { label: t("Dieser Zug", "This turn", "Este turno", "Ce tour", "Neste turno"), value: `${buzzwort.turnSolved ?? 0}`, highlighted: true },
+      { label: t("Gesamt", "Total", "Total", "Total", "Total"), value: `${buzzwort.solvedTerms ?? 0}` },
+      { label: t("Rolle", "Role", "Rol", "Rôle", "Função"), value: buzzwort.roleLabel ?? "-" }
     ],
     ready: buildReadyModel(context)
   };

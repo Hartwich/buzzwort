@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { toPhaserColor } from "@open-party-lab/game-core";
+import type { SupportedLanguage } from "@open-party-lab/game-core";
 import { buzzwortManifest } from "../manifest.js";
 import { tokens } from "./platformTheme.js";
 
@@ -75,7 +76,7 @@ interface ScoreEntryLike {
 interface RoundScreenState {
   phase: string | null;
   message: string | null;
-  language: "de" | "en";
+  language: SupportedLanguage;
   players: Array<{ id: string; name: string }>;
   entries: ScoreEntryLike[];
 }
@@ -94,7 +95,10 @@ const copy = {
     standings: "STANDINGS",
     noPoints: "No points yet.",
     waiting: "Ready up for the next round."
-  }
+  },
+  es: { getReady: "La ronda empieza pronto", roundOver: "Fin de la ronda", standings: "MARCADOR", noPoints: "Aún no hay puntos.", waiting: "Prepárense para la próxima ronda." },
+  fr: { getReady: "La manche commence bientôt", roundOver: "Fin de la manche", standings: "CLASSEMENT", noPoints: "Pas encore de points.", waiting: "Préparez-vous pour la prochaine manche." },
+  "pt-BR": { getReady: "A rodada começa em breve", roundOver: "Fim da rodada", standings: "PLACAR", noPoints: "Ainda sem pontos.", waiting: "Preparem-se para a próxima rodada." }
 };
 
 /** Narrows the loosely typed host state this scene receives. */
@@ -134,7 +138,7 @@ function readState(input: unknown): RoundScreenState {
   return {
     phase,
     message: typeof state.game?.message === "string" ? state.game.message : null,
-    language: state.room?.language === "en" ? "en" : "de",
+    language: (state.room?.language === "de" || state.room?.language === "en" || state.room?.language === "es" || state.room?.language === "fr" || state.room?.language === "pt-BR" ? state.room.language : "de"),
     players,
     entries
   };
