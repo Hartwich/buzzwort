@@ -585,6 +585,18 @@ export const serverGame: ServerGame<BuzzwortState, BuzzwortInput, BuzzwortContro
     };
   },
   handleHostAction(_state, action, _context) {
+    const setup = action as { type?: unknown; mode?: unknown; watcher?: unknown; duration?: unknown } | null;
+    if (setup?.type === "configure-lobby") {
+      if (setup.mode === "duel" || setup.mode === "team") {
+        return { roomSettings: { [MODE_SETTING_KEY]: setup.mode } };
+      }
+      if (setup.watcher === "on" || setup.watcher === "off") {
+        return { roomSettings: { [WATCHER_SETTING_KEY]: setup.watcher } };
+      }
+      const duration = BUZZWORT_TURN_DURATION_OPTIONS.find((value) => String(value) === setup.duration);
+      return duration === undefined ? {} : { roomSettings: { [TURN_MS_SETTING_KEY]: duration } };
+    }
+
     const hostAction = action as Partial<BuzzwortHostAction> | null;
 
     if (hostAction?.type === "set_mode" && (hostAction.mode === "duel" || hostAction.mode === "team")) {
@@ -592,7 +604,7 @@ export const serverGame: ServerGame<BuzzwortState, BuzzwortInput, BuzzwortContro
     }
 
     if (hostAction?.type === "set_watcher" && typeof hostAction.watcherEnabled === "boolean") {
-      return { roomSettings: { [WATCHER_SETTING_KEY]: hostAction.watcherEnabled } };
+      return { roomSettings: { [WATCHER_SETTING_KEY]: hostAction.watcherEnabled ? "on" : "off" } };
     }
 
     if (

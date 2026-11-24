@@ -33,7 +33,7 @@ interface SecretCardLayoutModel {
   helperText?: string;
   countdownMs?: number | null;
   timer?: { remainingMs: number | null; durationMs: number } | null;
-  card?: { term: string; forbidden: string[]; tag?: string } | null;
+  card?: { term: string; forbidden: string[]; forbiddenLabel?: string } | null;
   hiddenCardHint?: string;
   actions?: Array<{
     id: string;
@@ -316,8 +316,8 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
 
   const hiddenCardHint = buzzwort.card
     ? undefined
-    : buzzwort.role === "bench"
-      ? t("Das andere Team ist dran.", "The other team is playing.", "Está jugando el otro equipo.", "L’autre équipe joue.", "O outro time está jogando.")
+    : !isPlaying || buzzwort.turnPhase === "handover" || buzzwort.role === "bench"
+      ? undefined
       : t(`Nur ${explainerName ?? "der Erklärer"}${watcherName ? ` und ${watcherName}` : ""} sehen die Karte.`, `Only ${explainerName ?? "the explainer"}${watcherName ? ` and ${watcherName}` : ""} can see the card.`, `Solo ${explainerName ?? "quien explica"}${watcherName ? ` y ${watcherName}` : ""} ven la tarjeta.`, `Seuls ${explainerName ?? "la personne qui fait deviner"}${watcherName ? ` et ${watcherName}` : ""} voient la carte.`, `Só ${explainerName ?? "quem explica"}${watcherName ? ` e ${watcherName}` : ""} podem ver a carta.`);
 
   const feed = (buzzwort.events ?? [])
@@ -346,7 +346,7 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
       ? {
           term: buzzwort.card.term,
           forbidden: buzzwort.card.forbidden,
-          tag: buzzwort.isWatcher ? t("Wächter-Ansicht", "Watcher view", "Vista de vigilancia", "Vue du surveillant", "Visão do fiscal") : undefined
+          forbiddenLabel: t("Verbotene Wörter", "Forbidden words", "Palabras prohibidas", "Mots interdits", "Palavras proibidas")
         }
       : null,
     hiddenCardHint,
@@ -358,8 +358,7 @@ function buildBuzzwortControllerModel(context: ControllerGameRenderContext): Sec
     feed,
     stats: [
       { label: t("Dieser Zug", "This turn", "Este turno", "Ce tour", "Neste turno"), value: `${buzzwort.turnSolved ?? 0}`, highlighted: true },
-      { label: t("Gesamt", "Total", "Total", "Total", "Total"), value: `${buzzwort.solvedTerms ?? 0}` },
-      { label: t("Rolle", "Role", "Rol", "Rôle", "Função"), value: buzzwort.roleLabel ?? "-" }
+      { label: t("Gesamt", "Total", "Total", "Total", "Total"), value: `${buzzwort.solvedTerms ?? 0}` }
     ],
     ready: buildReadyModel(context)
   };
